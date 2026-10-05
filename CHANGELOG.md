@@ -3,7 +3,7 @@
 All notable changes to thunder-daw are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [v0.2.0] - 2026-10-05
 
 ### Added
 
@@ -17,6 +17,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Volume + filter-cutoff automation lanes with linear interpolation
 - Project save/load (JSON), WAV mixdown export, MIDI (SMF) export
 - Metronome, swing, tap tempo, song loop
+- 7 unit tests (note tools, save/load, engine scheduler, NaN-free render)
 
 ### Fixed
 
@@ -46,6 +47,6 @@ Initial release.
 
 - Audio thread drops to silence on lock contention (`Mutex::try_lock`)
 - Linux build needs ALSA/X11/Wayland dev packages (see README)
-- No unit tests yet beyond the `--offline-test` smoke test
 
+[v0.2.0]: https://github.com/canureal/thunder-daw/releases/tag/v0.2.0
 [v0.1.0]: https://github.com/canureal/thunder-daw/releases/tag/v0.1.0
