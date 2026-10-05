@@ -1,0 +1,10 @@
+[package]
+name = "thunder-daw"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+cpal = "0.18"
+eframe = "0.36"
+egui = "0.36"
+fundsp = "0.23"
