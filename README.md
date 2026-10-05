@@ -38,6 +38,7 @@ cargo run -- --offline-test
 
 - Landing page + docs: [`website/`](website/) — deployed to GitHub Pages on every push to `main`
 - Docs: open the deployed site and go to **Docs**
+- Releases: [changelog](CHANGELOG.md) + [GitHub Releases](https://github.com/canureal/thunder-daw/releases)
 
 ## Project status
 

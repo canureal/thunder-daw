@@ -26,5 +26,5 @@ Honest status as of the latest-deps upgrade (cpal 0.18, eframe/egui 0.36, fundsp
 ## To go prod
 
 1. ~~Push + enable Pages~~ done
-2. Tag `v0.1.0`, add CHANGELOG.md
+2. ~~Tag `v0.1.0`, add CHANGELOG.md~~ done ([releases](https://canureal.github.io/thunder-daw/releases.html))
 3. Add `cargo test` unit tests (sequencer timing, pan gains) so CI actually gates logic
