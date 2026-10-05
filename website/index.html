@@ -10,36 +10,46 @@
 <header>
   <h1>⚡ thunder-daw</h1>
   <p>A tiny FL Studio-style step-sequencer DAW in Rust.</p>
-  <nav><a href="index.html">Home</a> · <a href="docs.html">Docs</a> · <a href="releases.html">Releases</a></nav>
+  <nav>
+    <a href="index.html" aria-current="page">Home</a> ·
+    <a href="docs.html">Docs</a> ·
+    <a href="releases.html">Releases</a>
+  </nav>
 </header>
 <main>
-  <section class="stack">
-    <div><strong>cpal</strong><span>audio backend</span></div>
-    <div><strong>egui</strong><span>immediate-mode GUI</span></div>
-    <div><strong>fundsp</strong><span>every voice is a live DSP graph</span></div>
+  <section class="grid">
+    <div class="card"><strong>cpal 0.18</strong><span>cross-platform audio backend</span></div>
+    <div class="card"><strong>egui 0.36</strong><span>immediate-mode GUI</span></div>
+    <div class="card"><strong>fundsp 0.23</strong><span>every voice is a live DSP graph</span></div>
   </section>
+
+  <section>
+    <h2>Make music</h2>
+    <div class="grid">
+      <div class="card"><strong>Piano roll</strong><span>notes, velocity, ghost notes, scales, chord stamps, quantize / humanize / strum / arp</span></div>
+      <div class="card"><strong>Playlist</strong><span>8 patterns as per-bar clips, Song / Pattern modes</span></div>
+      <div class="card"><strong>Instruments</strong><span>8-voice poly synths, synthesized drum kit, WAV/MP3 sampler + browser</span></div>
+      <div class="card"><strong>Mixer &amp; FX</strong><span>delay + reverb sends, soft-clipped master, scope, peak meter</span></div>
+      <div class="card"><strong>Automation</strong><span>volume + filter-cutoff lanes, no-dropout live control</span></div>
+      <div class="card"><strong>Song tools</strong><span>JSON save/load, WAV mixdown, MIDI export, metronome, swing, tap tempo</span></div>
+    </div>
+  </section>
+
   <section>
     <h2>Run it</h2>
-    <pre>sudo apt install libasound2-dev libx11-dev libxkbcommon-dev libwayland-dev libegl-dev libgl-dev
-cargo run --release</pre>
+    <pre><code>sudo apt install libasound2-dev libx11-dev libxkbcommon-dev libwayland-dev libegl-dev libgl-dev
+cargo run --release</code></pre>
+    <p>…or grab the Linux binary from
+    <a href="releases.html">Releases</a>.</p>
   </section>
-  <section>
-    <h2>Features</h2>
-    <ul>
-      <li>6-channel × 16-step sequencer with mute / solo</li>
-      <li>Per-channel fundsp editor: wave, base note, cutoff, Q, ADSR</li>
-      <li>Mixer with equal-power pan, master bus with soft clip</li>
-      <li>Live 2-octave piano on a dedicated saw voice</li>
-      <li>Master scope + peak meter</li>
-      <li>Headless self-test: <code>cargo run -- --offline-test</code></li>
-    </ul>
-  </section>
+
   <section>
     <h2>Status</h2>
-    <p>Early but honest: CI, Dependabot, and this site ship with the repo.
-    See the <a href="docs.html">Docs</a> page for the full prod-readiness audit.</p>
+    <p>Actively developed toy with honest engineering: CI, Dependabot,
+    7 unit tests, and a headless audio self-test on every push.
+    Full audit on the <a href="docs.html">Docs</a> page.</p>
   </section>
 </main>
-<footer>MIT · thunder-daw contributors</footer>
+<footer>MIT · thunder-daw contributors · <a href="https://github.com/canureal/thunder-daw">GitHub</a></footer>
 </body>
 </html>

@@ -9,45 +9,60 @@
 <body>
 <header>
   <h1>⚡ thunder-daw docs</h1>
-  <nav><a href="index.html">Home</a> · <a href="docs.html">Docs</a> · <a href="releases.html">Releases</a></nav>
+  <p>Architecture, controls, and an honest prod-readiness audit.</p>
+  <nav>
+    <a href="index.html">Home</a> ·
+    <a href="docs.html" aria-current="page">Docs</a> ·
+    <a href="releases.html">Releases</a>
+  </nav>
 </header>
 <main>
   <section>
     <h2>Architecture</h2>
-    <p>One <code>Arc&lt;Mutex&lt;AudioState&gt;&gt;</code> shared between the cpal audio
-    thread and the egui UI thread. Each channel owns a fundsp voice:</p>
-    <pre>(var(pitch) &gt;&gt; osc &gt;&gt; lowpass_hz(cut, q))
-  * (var(gate) &gt;&gt; adsr_live(a, d, s, r))
-  &gt;&gt; pan(0.0)</pre>
-    <p>Lock-free <code>Shared</code> vars carry pitch/gate into the realtime
-    graph. The cpal callback advances the 16th-note clock
-    (<code>sr * 60 / bpm / 4</code> samples per step) and schedules gate-off
-    countdowns per voice. Mixing (volume, equal-power pan, tanh soft clip)
-    and the scope buffer happen in plain Rust after the fundsp ticks.</p>
+    <p>Mirrors real FL Studio: global channels → patterns of notes →
+    playlist arrangement → mixer. One <code>Arc&lt;Mutex&lt;AppState&gt;&gt;</code>
+    is shared between the cpal audio thread and the egui thread.</p>
+    <table>
+      <tr><th>Module</th><th>Owns</th></tr>
+      <tr><td><code>song.rs</code></td><td>Channels, patterns, notes, automation, save/load, edit tools + unit tests</td></tr>
+      <tr><td><code>engine.rs</code></td><td>fundsp voice pools (8/channel), kit + sampler playback, delay/reverb, tick scheduler</td></tr>
+      <tr><td><code>export.rs</code></td><td>WAV mixdown (hound), hand-rolled SMF type-0 MIDI writer</td></tr>
+      <tr><td><code>ui.rs</code></td><td>Transport, rack, piano roll, playlist, mixer, browser</td></tr>
+    </table>
+    <p>Each synth voice is a live fundsp graph:</p>
+    <pre><code>((var(pitch) >> osc | var(cutoff) | dc(Q)) >> lowpass
+  * (var(gate) >> adsr_live)) >> pan</code></pre>
+    <p>Pitch/gate/cutoff ride lock-free <code>Shared</code> vars, so automation
+    moves the filter with zero graph rebuilds. The scheduler runs on an integer
+    sample clock (no float drift), with swing applied to off-beat 16ths.</p>
   </section>
+
   <section>
     <h2>Controls</h2>
-    <ul>
-      <li><strong>Transport:</strong> Play/Stop, Reset, BPM 60–200, Master</li>
-      <li><strong>Channel rack:</strong> click steps to toggle, M = mute, S = solo</li>
-      <li><strong>Editor:</strong> wave, base note (MIDI 21–108), cutoff, Q, ADSR — rebuilds the fundsp graph live</li>
-      <li><strong>Piano:</strong> triggers the dedicated live voice for ~0.4&nbsp;s</li>
-    </ul>
+    <table>
+      <tr><th>Where</th><th>What</th></tr>
+      <tr><td>Transport</td><td>Play/Stop/Reset · Song-Pattern mode · BPM + tap · swing · metronome · loop · master · bar:beat:tick readout</td></tr>
+      <tr><td>Channel rack</td><td>Step toggles · mute/solo · synth wave / kit piece picker · base note · preview</td></tr>
+      <tr><td>Piano roll</td><td>Click: add · drag: move · right edge: resize · right-click / Del: delete · velocity lane · automation lane</td></tr>
+      <tr><td>Playlist</td><td>One pattern clip per bar · reorder · delete · add bars</td></tr>
+      <tr><td>Mixer</td><td>Volume / pan / cutoff / delay + reverb sends per channel · master delay + reverb</td></tr>
+      <tr><td>Browser</td><td>Sample folders · preview · load into selected channel · direct path load</td></tr>
+    </table>
   </section>
+
   <section>
     <h2>Prod-readiness audit</h2>
     <ul>
-      <li>✅ Latest deps: cpal 0.18, eframe/egui 0.36, fundsp 0.23</li>
-      <li>✅ CI (<code>ci.yml</code>): fmt, clippy, check, offline-test</li>
-      <li>✅ Dependabot: cargo + github-actions, weekly</li>
-      <li>✅ GitHub Pages deploy of this site on push to <code>main</code></li>
-      <li>✅ MIT license, README, <code>--offline-test</code> self-test</li>
-      <li>⚠️ No git remote yet — push to GitHub and enable Pages (Settings → Pages → GitHub Actions)</li>
-      <li>⚠️ No release packaging (no installers, no crates.io publish, no changelog)</li>
-      <li>⚠️ Audio-thread uses <code>Mutex::try_lock</code> (dropout on contention) — fine for a toy, not for stage use</li>
+      <li>✅ Latest deps: cpal 0.18, eframe/egui 0.36, fundsp 0.23, Rust edition 2024</li>
+      <li>✅ CI: fmt · clippy <code>-D warnings</code> · check · unit tests · headless audio self-test</li>
+      <li>✅ Dependabot (cargo + actions, weekly) — already merging</li>
+      <li>✅ Releases with binaries (v0.1.0, v0.2.0) + changelog</li>
+      <li>✅ This site, auto-deployed from <code>website/</code> on push to <code>main</code></li>
+      <li>⚠️ Audio thread uses <code>Mutex::try_lock</code> (dropout on contention) — fine for a toy, not for stage use</li>
+      <li>⚠️ Fixed 8 channels; no VST hosting, no audio recording, no MIDI hardware I/O</li>
     </ul>
   </section>
 </main>
-<footer>MIT · thunder-daw contributors</footer>
+<footer>MIT · thunder-daw contributors · <a href="https://github.com/canureal/thunder-daw">GitHub</a></footer>
 </body>
 </html>
