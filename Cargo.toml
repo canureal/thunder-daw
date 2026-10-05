@@ -1,6 +1,6 @@
 [package]
 name = "thunder-daw"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 
 [dependencies]
@@ -8,3 +8,6 @@ cpal = "0.18"
 eframe = "0.36"
 egui = "0.36"
 fundsp = "0.23"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+hound = "3"

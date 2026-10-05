@@ -3,6 +3,26 @@
 All notable changes to thunder-daw are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+
+- Piano roll: click/drag note editing, resize, velocity lane, ghost notes,
+  scale highlighting, chord stamps, quantize / humanize / strum / arpeggiate
+- Playlist arrangement with Song / Pattern modes and per-bar pattern clips
+- 8-voice polyphony per channel with voice stealing
+- Sampler channels: WAV/MP3/OGG loading, built-in synthesized drum kit,
+  sample browser with preview
+- Mixer FX: per-channel delay + reverb sends, master delay/reverb
+- Volume + filter-cutoff automation lanes with linear interpolation
+- Project save/load (JSON), WAV mixdown export, MIDI (SMF) export
+- Metronome, swing, tap tempo, song loop
+
+### Fixed
+
+- Zeroed channel defaults NaN'd the fundsp SVF and poisoned the mix bus;
+  defaults are now playable and filter params are clamped
+
 ## [v0.1.0] - 2026-10-05
 
 Initial release.
