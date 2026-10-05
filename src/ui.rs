@@ -953,18 +953,17 @@ fn automation_lane(ui: &mut AppUi, s: &mut AppState, ch: usize, pat: usize, u: &
     }
     if resp.clicked_by(egui::PointerButton::Secondary)
         && let Some(pos) = resp.hover_pos()
+        && let Some(idx) = near_idx(&points, pos)
     {
-        if let Some(idx) = near_idx(&points, pos) {
-            let pts = if is_vol {
-                &mut s.song.patterns[pat].auto_vol
-            } else {
-                &mut s.song.patterns[pat].auto_cut
-            };
-            if let Some(list) = pts.get_mut(ch)
-                && idx < list.len()
-            {
-                list.remove(idx);
-            }
+        let pts = if is_vol {
+            &mut s.song.patterns[pat].auto_vol
+        } else {
+            &mut s.song.patterns[pat].auto_cut
+        };
+        if let Some(list) = pts.get_mut(ch)
+            && idx < list.len()
+        {
+            list.remove(idx);
         }
     }
 }
