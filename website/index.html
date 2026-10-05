@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>thunder-daw — tiny FL-style DAW in Rust</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>⚡ thunder-daw</h1>
+  <p>A tiny FL Studio-style step-sequencer DAW in Rust.</p>
+  <nav><a href="index.html">Home</a> · <a href="docs.html">Docs</a></nav>
+</header>
+<main>
+  <section class="stack">
+    <div><strong>cpal</strong><span>audio backend</span></div>
+    <div><strong>egui</strong><span>immediate-mode GUI</span></div>
+    <div><strong>fundsp</strong><span>every voice is a live DSP graph</span></div>
+  </section>
+  <section>
+    <h2>Run it</h2>
+    <pre>sudo apt install libasound2-dev libx11-dev libxkbcommon-dev libwayland-dev libegl-dev libgl-dev
+cargo run --release</pre>
+  </section>
+  <section>
+    <h2>Features</h2>
+    <ul>
+      <li>6-channel × 16-step sequencer with mute / solo</li>
+      <li>Per-channel fundsp editor: wave, base note, cutoff, Q, ADSR</li>
+      <li>Mixer with equal-power pan, master bus with soft clip</li>
+      <li>Live 2-octave piano on a dedicated saw voice</li>
+      <li>Master scope + peak meter</li>
+      <li>Headless self-test: <code>cargo run -- --offline-test</code></li>
+    </ul>
+  </section>
+  <section>
+    <h2>Status</h2>
+    <p>Early but honest: CI, Dependabot, and this site ship with the repo.
+    See the <a href="docs.html">Docs</a> page for the full prod-readiness audit.</p>
+  </section>
+</main>
+<footer>MIT · thunder-daw contributors</footer>
+</body>
+</html>

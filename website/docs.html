@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>thunder-daw docs</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>⚡ thunder-daw docs</h1>
+  <nav><a href="index.html">Home</a> · <a href="docs.html">Docs</a></nav>
+</header>
+<main>
+  <section>
+    <h2>Architecture</h2>
+    <p>One <code>Arc&lt;Mutex&lt;AudioState&gt;&gt;</code> shared between the cpal audio
+    thread and the egui UI thread. Each channel owns a fundsp voice:</p>
+    <pre>(var(pitch) &gt;&gt; osc &gt;&gt; lowpass_hz(cut, q))
+  * (var(gate) &gt;&gt; adsr_live(a, d, s, r))
+  &gt;&gt; pan(0.0)</pre>
+    <p>Lock-free <code>Shared</code> vars carry pitch/gate into the realtime
+    graph. The cpal callback advances the 16th-note clock
+    (<code>sr * 60 / bpm / 4</code> samples per step) and schedules gate-off
+    countdowns per voice. Mixing (volume, equal-power pan, tanh soft clip)
+    and the scope buffer happen in plain Rust after the fundsp ticks.</p>
+  </section>
+  <section>
+    <h2>Controls</h2>
+    <ul>
+      <li><strong>Transport:</strong> Play/Stop, Reset, BPM 60–200, Master</li>
+      <li><strong>Channel rack:</strong> click steps to toggle, M = mute, S = solo</li>
+      <li><strong>Editor:</strong> wave, base note (MIDI 21–108), cutoff, Q, ADSR — rebuilds the fundsp graph live</li>
+      <li><strong>Piano:</strong> triggers the dedicated live voice for ~0.4&nbsp;s</li>
+    </ul>
+  </section>
+  <section>
+    <h2>Prod-readiness audit</h2>
+    <ul>
+      <li>✅ Latest deps: cpal 0.18, eframe/egui 0.36, fundsp 0.23</li>
+      <li>✅ CI (<code>ci.yml</code>): fmt, clippy, check, offline-test</li>
+      <li>✅ Dependabot: cargo + github-actions, weekly</li>
+      <li>✅ GitHub Pages deploy of this site on push to <code>main</code></li>
+      <li>✅ MIT license, README, <code>--offline-test</code> self-test</li>
+      <li>⚠️ No git remote yet — push to GitHub and enable Pages (Settings → Pages → GitHub Actions)</li>
+      <li>⚠️ No release packaging (no installers, no crates.io publish, no changelog)</li>
+      <li>⚠️ Audio-thread uses <code>Mutex::try_lock</code> (dropout on contention) — fine for a toy, not for stage use</li>
+    </ul>
+  </section>
+</main>
+<footer>MIT · thunder-daw contributors</footer>
+</body>
+</html>

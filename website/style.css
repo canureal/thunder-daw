@@ -1,0 +1,12 @@
+:root { color-scheme: dark; }
+body { font-family: system-ui, sans-serif; max-width: 720px; margin: 0 auto; padding: 2rem 1rem; background: #141417; color: #e8e8ea; }
+header h1 { margin-bottom: 0; }
+nav { margin: 0.5rem 0 2rem; }
+a { color: #8fd18f; }
+.stack { display: flex; gap: 1rem; margin-bottom: 2rem; }
+.stack div { background: #1f1f24; border: 1px solid #333; border-radius: 8px; padding: 0.8rem 1rem; flex: 1; }
+.stack strong { display: block; font-size: 1.2rem; }
+.stack span { color: #aaa; font-size: 0.85rem; }
+pre { background: #1f1f24; padding: 1rem; border-radius: 8px; overflow-x: auto; }
+code { background: #1f1f24; padding: 0.1rem 0.3rem; border-radius: 4px; }
+footer { margin-top: 3rem; color: #777; font-size: 0.85rem; }
