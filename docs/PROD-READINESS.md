@@ -15,18 +15,16 @@ Honest status as of the latest-deps upgrade (cpal 0.18, eframe/egui 0.36, fundsp
 
 ## Not done ❌
 
-- **No git remote** — repo is local-only. To finish: create the GitHub repo,
-  `git remote add origin …`, push, then enable Pages via
-  Settings → Pages → Source: **GitHub Actions**
+- **Git remote live** — https://github.com/canureal/thunder-daw, Pages enabled
+  (Actions source) at https://canureal.github.io/thunder-daw/
 - **No release story** — no tags, no changelog, no packaged binaries, not on crates.io
 - **No tests beyond the smoke test** — no `#[test]` unit tests, no coverage gate
 - **Realtime shortcut** — audio thread uses `Mutex::try_lock` and drops to
   silence on contention; correct for a toy, not stage-ready
-- **Dependabot is config-only until pushed** — it runs on GitHub's schedule,
-  nothing to observe locally
+- **Dependabot active** — opened cargo + github-actions PRs on first push
 
 ## To go prod
 
-1. Push + enable Pages
+1. ~~Push + enable Pages~~ done
 2. Tag `v0.1.0`, add CHANGELOG.md
 3. Add `cargo test` unit tests (sequencer timing, pan gains) so CI actually gates logic
