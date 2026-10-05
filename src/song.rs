@@ -140,6 +140,35 @@ impl Default for ChannelKind {
     }
 }
 
+/// Everything needed to build one fundsp voice, copied out of a [`Channel`].
+/// Keeps voice construction honest instead of passing 6 loose DSP arguments.
+#[derive(Clone, Copy)]
+pub struct VoiceSpec {
+    pub wave: WaveKind,
+    pub q: f32,
+    pub attack: f32,
+    pub decay: f32,
+    pub sustain: f32,
+    pub release: f32,
+}
+
+impl Channel {
+    pub fn voice_spec(&self) -> VoiceSpec {
+        VoiceSpec {
+            wave: match self.kind {
+                ChannelKind::Synth { wave } => wave,
+                // Kit/sampler channels still get a pool so live preview works.
+                _ => WaveKind::Sine,
+            },
+            q: self.q,
+            attack: self.attack,
+            decay: self.decay,
+            sustain: self.sustain,
+            release: self.release,
+        }
+    }
+}
+
 impl Default for Channel {
     /// Sane DSP defaults: a zeroed filter (cutoff 0 / Q 0) NaNs fundsp's
     /// SVF and poisons the whole mix bus, so defaults must be playable.
@@ -340,7 +369,6 @@ pub fn tool_chord(tick: u32, root: u8, minor: bool) -> Vec<Note> {
 // Demo song
 // ---------------------------------------------------------------------------
 
-#[allow(clippy::too_many_arguments)]
 fn synth_ch(
     name: &str,
     wave: WaveKind,
@@ -348,10 +376,7 @@ fn synth_ch(
     vol: f32,
     pan: f32,
     cutoff: f32,
-    a: f32,
-    d: f32,
-    s: f32,
-    r: f32,
+    adsr: [f32; 4],
 ) -> Channel {
     Channel {
         name: name.into(),
@@ -361,10 +386,10 @@ fn synth_ch(
         pan,
         cutoff,
         q: 1.0,
-        attack: a,
-        decay: d,
-        sustain: s,
-        release: r,
+        attack: adsr[0],
+        decay: adsr[1],
+        sustain: adsr[2],
+        release: adsr[3],
         delay_send: 0.0,
         reverb_send: 0.15,
         ..Default::default()
@@ -409,10 +434,7 @@ pub fn demo_song() -> Song {
             0.85,
             -0.1,
             520.0,
-            0.008,
-            0.1,
-            0.7,
-            0.1,
+            [0.008, 0.1, 0.7, 0.1],
         ),
         synth_ch(
             "Lead",
@@ -421,10 +443,7 @@ pub fn demo_song() -> Song {
             0.55,
             0.0,
             2400.0,
-            0.01,
-            0.12,
-            0.6,
-            0.12,
+            [0.01, 0.12, 0.6, 0.12],
         ),
         synth_ch(
             "Pad",
@@ -433,10 +452,7 @@ pub fn demo_song() -> Song {
             0.5,
             0.0,
             1200.0,
-            0.2,
-            0.3,
-            0.7,
-            0.4,
+            [0.2, 0.3, 0.7, 0.4],
         ),
         Channel {
             name: "Sampler".into(),

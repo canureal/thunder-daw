@@ -30,11 +30,11 @@ impl eframe::App for DawApp {
                     u.separator();
                     u.horizontal(|u| {
                         u.vertical(|u| {
-                            ui::playlist(&mut self.ui, &mut s, u);
+                            ui::playlist(&mut s, u);
                         });
                         u.separator();
                         u.vertical(|u| {
-                            ui::mixer(&mut self.ui, &mut s, u);
+                            ui::mixer(&mut s, u);
                         });
                     });
                     u.separator();

@@ -56,6 +56,7 @@ enum AutoSel {
     Cut,
 }
 
+#[derive(Clone, Copy)]
 enum DragKind {
     Move,
     Resize,
@@ -772,11 +773,11 @@ pub fn piano_roll(ui: &mut AppUi, s: &mut AppState, u: &mut egui::Ui) {
         notes.remove(idx);
     }
 
-    velocity_lane(ui, s, ch, pat, u);
+    velocity_lane(s, ch, pat, u);
     automation_lane(ui, s, ch, pat, u);
 }
 
-fn velocity_lane(_ui: &mut AppUi, s: &mut AppState, ch: usize, pat: usize, u: &mut egui::Ui) {
+fn velocity_lane(s: &mut AppState, ch: usize, pat: usize, u: &mut egui::Ui) {
     u.label("Velocity (drag bars)");
     let avail_w = u.available_width().max(300.0);
     let h = 56.0;
@@ -895,13 +896,12 @@ fn automation_lane(ui: &mut AppUi, s: &mut AppState, ch: usize, pat: usize, u: &
             as u32
     };
     let val_at = |y: f32| from_norm(1.0 - (y - rect.min.y) / h);
-    let near_idx = |points: &[AutoPoint], tick: u32, y: f32| -> Option<usize> {
+    let near_idx = |points: &[AutoPoint], pos: egui::Pos2| -> Option<usize> {
         let mut best: Option<usize> = None;
         let mut best_d = f32::MAX;
         for (idx, p) in points.iter().enumerate() {
-            let dx =
-                x_of(p.tick) - (rect.min.x + KEY_W + tick as f32 / 64.0 * (rect.width() - KEY_W));
-            let dy = y_of(p.value) - y;
+            let dx = x_of(p.tick) - pos.x;
+            let dy = y_of(p.value) - pos.y;
             let d = dx * dx + dy * dy;
             if d < best_d && d < 144.0 {
                 best_d = d;
@@ -914,7 +914,7 @@ fn automation_lane(ui: &mut AppUi, s: &mut AppState, ch: usize, pat: usize, u: &
         ui.auto_drag = None;
         if let Some(pos) = resp.hover_pos() {
             let t = tick_at(pos.x);
-            if near_idx(&points, t, pos.y).is_none() {
+            if near_idx(&points, pos).is_none() {
                 let pts = if is_vol {
                     &mut s.song.patterns[pat].auto_vol
                 } else {
@@ -928,7 +928,7 @@ fn automation_lane(ui: &mut AppUi, s: &mut AppState, ch: usize, pat: usize, u: &
                     ui.auto_drag = Some(list.len() - 1);
                 }
             } else {
-                ui.auto_drag = near_idx(&points, t, pos.y);
+                ui.auto_drag = near_idx(&points, pos);
             }
         }
     }
@@ -954,8 +954,7 @@ fn automation_lane(ui: &mut AppUi, s: &mut AppState, ch: usize, pat: usize, u: &
     if resp.clicked_by(egui::PointerButton::Secondary)
         && let Some(pos) = resp.hover_pos()
     {
-        let t = tick_at(pos.x);
-        if let Some(idx) = near_idx(&points, t, pos.y) {
+        if let Some(idx) = near_idx(&points, pos) {
             let pts = if is_vol {
                 &mut s.song.patterns[pat].auto_vol
             } else {
@@ -974,7 +973,7 @@ fn automation_lane(ui: &mut AppUi, s: &mut AppState, ch: usize, pat: usize, u: &
 // Playlist
 // ---------------------------------------------------------------------------
 
-pub fn playlist(_ui: &mut AppUi, s: &mut AppState, u: &mut egui::Ui) {
+pub fn playlist(s: &mut AppState, u: &mut egui::Ui) {
     u.heading("Playlist (arrangement)");
     let mut dirty_len: Option<usize> = None;
     for bar in 0..s.song.arrangement.len() {
@@ -1017,7 +1016,7 @@ pub fn playlist(_ui: &mut AppUi, s: &mut AppState, u: &mut egui::Ui) {
 // Mixer
 // ---------------------------------------------------------------------------
 
-pub fn mixer(_ui: &mut AppUi, s: &mut AppState, u: &mut egui::Ui) {
+pub fn mixer(s: &mut AppState, u: &mut egui::Ui) {
     u.heading("Mixer");
     u.horizontal(|u| {
         for i in 0..s.song.channels.len() {

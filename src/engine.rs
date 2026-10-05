@@ -1,7 +1,7 @@
 //! Realtime engine: cpal backend, fundsp synth voices (polyphonic pools),
 //! PCM kit + sampler playback, delay/reverb sends, sample-clock scheduler.
 
-use crate::song::{ChannelKind, KitPiece, Song, TICKS_PATTERN, WaveKind, eval_auto};
+use crate::song::{ChannelKind, KitPiece, Song, TICKS_PATTERN, VoiceSpec, WaveKind, eval_auto};
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use fundsp::prelude::{
     AudioUnit, Shared, Wave, adsr_live, dc, highpass_hz, lowpass, midi_hz, pan, reverb_stereo, saw,
@@ -23,20 +23,31 @@ struct VoiceRt {
     age: u64,
 }
 
-#[allow(clippy::too_many_arguments)]
+const LIVE_VOICE_SPEC: VoiceSpec = VoiceSpec {
+    wave: WaveKind::Saw,
+    q: 1.0,
+    attack: 0.005,
+    decay: 0.08,
+    sustain: 0.7,
+    release: 0.1,
+};
+
 fn make_voice(
-    wave: WaveKind,
-    q: f32,
-    a: f32,
-    d: f32,
-    s: f32,
-    r: f32,
+    spec: VoiceSpec,
     pitch: &Shared,
     gate: &Shared,
     cutoff: &Shared,
     sample_rate: f64,
 ) -> Box<dyn AudioUnit + Send> {
-    // Degenerate filter params (cutoff/Q <= 0) NaN the SVF: clamp hard.
+    let VoiceSpec {
+        wave,
+        q,
+        attack: a,
+        decay: d,
+        sustain: s,
+        release: r,
+    } = spec;
+    // Degenerate Q (<= 0) NaNs the SVF: clamp hard.
     let q = q.clamp(0.1, 8.0);
     // Voice = (pitch-driven osc through audio-rate lowpass) * live ADSR, stereo.
     // Cutoff rides a Shared var: automation moves it with no graph rebuilds.
@@ -298,18 +309,7 @@ impl EngineRt {
         let gate = shared(0.0);
         let cutoff = shared(2600.0);
         let live_voice = VoiceRt {
-            unit: make_voice(
-                WaveKind::Saw,
-                1.0,
-                0.005,
-                0.08,
-                0.7,
-                0.1,
-                &pitch,
-                &gate,
-                &cutoff,
-                sr as f64,
-            ),
+            unit: make_voice(LIVE_VOICE_SPEC, &pitch, &gate, &cutoff, sr as f64),
             pitch,
             gate,
             cutoff,
@@ -387,22 +387,7 @@ impl EngineRt {
                 let pitch = shared(midi_hz(ch.midi_base as f32));
                 let gate = shared(0.0);
                 let cutoff = shared(ch.cutoff);
-                let wave = match ch.kind {
-                    ChannelKind::Synth { wave } => wave,
-                    _ => WaveKind::Sine,
-                };
-                let unit = make_voice(
-                    wave,
-                    ch.q,
-                    ch.attack,
-                    ch.decay,
-                    ch.sustain,
-                    ch.release,
-                    &pitch,
-                    &gate,
-                    &cutoff,
-                    self.sr as f64,
-                );
+                let unit = make_voice(ch.voice_spec(), &pitch, &gate, &cutoff, self.sr as f64);
                 pool.push(VoiceRt {
                     unit,
                     pitch,
@@ -427,25 +412,11 @@ impl EngineRt {
             self.ensure_channels(song);
             return;
         }
-        let ch = &song.channels[idx];
-        let wave = match ch.kind {
-            ChannelKind::Synth { wave } => wave,
-            _ => WaveKind::Sine,
-        };
+        let spec = song.channels[idx].voice_spec();
+        let cutoff_val = song.channels[idx].cutoff;
         for v in self.voices[idx].iter_mut() {
-            v.unit = make_voice(
-                wave,
-                ch.q,
-                ch.attack,
-                ch.decay,
-                ch.sustain,
-                ch.release,
-                &v.pitch,
-                &v.gate,
-                &v.cutoff,
-                self.sr as f64,
-            );
-            v.cutoff.set_value(ch.cutoff);
+            v.unit = make_voice(spec, &v.pitch, &v.gate, &v.cutoff, self.sr as f64);
+            v.cutoff.set_value(cutoff_val);
             v.off = 0;
         }
     }
@@ -453,20 +424,16 @@ impl EngineRt {
     /// First free voice, else steal the oldest-sounding one.
     fn alloc_voice(&mut self, ch: usize) -> Option<&mut VoiceRt> {
         let pool = self.voices.get_mut(ch)?;
-        let mut best: Option<usize> = None;
-        for (i, v) in pool.iter().enumerate() {
-            if v.off == 0 {
-                best = Some(i);
-                break;
-            }
-        }
-        let idx = best.unwrap_or_else(|| {
-            pool.iter()
-                .enumerate()
-                .min_by_key(|(_, v)| v.age)
-                .map(|(i, _)| i)
-                .unwrap_or(0)
-        });
+        let idx = pool
+            .iter()
+            .position(|v| v.off == 0)
+            .or_else(|| {
+                pool.iter()
+                    .enumerate()
+                    .min_by_key(|(_, v)| v.age)
+                    .map(|(i, _)| i)
+            })
+            .unwrap_or(0);
         self.age = self.age.wrapping_add(1);
         let v = &mut pool[idx];
         v.age = self.age;
@@ -698,7 +665,8 @@ impl EngineRt {
 
         for (ci, channel) in song.channels.iter().enumerate() {
             let vol_auto = self.auto_vol.get(ci).copied().unwrap_or(1.0);
-            let (lg, rg) = pan_gains(channel.pan, channel.volume * vol_auto);
+            let fader = channel.volume * vol_auto;
+            let (lg, rg) = pan_gains(channel.pan, fader);
             if ci < self.voices.len() {
                 for v in self.voices[ci].iter_mut() {
                     let (vl, vr) = v.unit.get_stereo();
