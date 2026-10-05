@@ -1,8 +1,8 @@
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use eframe::egui;
 use fundsp::prelude::{
-    adsr_live, highpass_hz, lowpass_hz, midi_hz, pan, saw, shared, sine, square, triangle, var,
-    white, AudioUnit, Shared,
+    AudioUnit, Shared, adsr_live, highpass_hz, lowpass_hz, midi_hz, pan, saw, shared, sine, square,
+    triangle, var, white,
 };
 use std::sync::{Arc, Mutex};
 
@@ -593,46 +593,46 @@ impl eframe::App for DawApp {
                         }
                     }
                 }
-                if ui.button("⏮ Reset").clicked() {
-                    if let Ok(mut s) = self.audio.lock() {
-                        s.step = 0;
-                        s.samples_to_next = 0;
-                    }
+                if ui.button("⏮ Reset").clicked()
+                    && let Ok(mut s) = self.audio.lock()
+                {
+                    s.step = 0;
+                    s.samples_to_next = 0;
                 }
                 let mut bpm_mut = bpm;
                 ui.add(egui::Slider::new(&mut bpm_mut, 60.0..=200.0).text("BPM"));
-                if (bpm_mut - bpm).abs() > f32::EPSILON {
-                    if let Ok(mut s) = self.audio.lock() {
-                        s.bpm = bpm_mut;
-                    }
+                if (bpm_mut - bpm).abs() > f32::EPSILON
+                    && let Ok(mut s) = self.audio.lock()
+                {
+                    s.bpm = bpm_mut;
                 }
                 let mut master_mut = master;
                 ui.add(egui::Slider::new(&mut master_mut, 0.0..=1.5).text("Master"));
-                if (master_mut - master).abs() > f32::EPSILON {
-                    if let Ok(mut s) = self.audio.lock() {
-                        s.master_vol = master_mut;
-                    }
+                if (master_mut - master).abs() > f32::EPSILON
+                    && let Ok(mut s) = self.audio.lock()
+                {
+                    s.master_vol = master_mut;
                 }
                 ui.label(format!("Step {:02}/16", (step % 16) + 1));
                 ui.add(
                     egui::ProgressBar::new(peak.clamp(0.0, 1.0))
                         .text(format!("{:.0}%", peak * 100.0)),
                 );
-                if ui.button("Demo pattern").clicked() {
-                    if let Ok(mut s) = self.audio.lock() {
-                        s.tracks[0].pattern = Track::kick().pattern;
-                        s.tracks[1].pattern = Track::snare().pattern;
-                        s.tracks[2].pattern = Track::hat().pattern;
-                        s.tracks[3].pattern = Track::bass().pattern;
-                        s.tracks[4].pattern = Track::lead().pattern;
-                        s.tracks[5].pattern = Track::pad().pattern;
-                    }
+                if ui.button("Demo pattern").clicked()
+                    && let Ok(mut s) = self.audio.lock()
+                {
+                    s.tracks[0].pattern = Track::kick().pattern;
+                    s.tracks[1].pattern = Track::snare().pattern;
+                    s.tracks[2].pattern = Track::hat().pattern;
+                    s.tracks[3].pattern = Track::bass().pattern;
+                    s.tracks[4].pattern = Track::lead().pattern;
+                    s.tracks[5].pattern = Track::pad().pattern;
                 }
-                if ui.button("Clear all").clicked() {
-                    if let Ok(mut s) = self.audio.lock() {
-                        for t in s.tracks.iter_mut() {
-                            t.pattern = [false; 16];
-                        }
+                if ui.button("Clear all").clicked()
+                    && let Ok(mut s) = self.audio.lock()
+                {
+                    for t in s.tracks.iter_mut() {
+                        t.pattern = [false; 16];
                     }
                 }
             });
@@ -682,16 +682,16 @@ impl eframe::App for DawApp {
                             }
                             ui.label(wave_name);
                             let mut m = mute;
-                            if ui.toggle_value(&mut m, "M").changed() {
-                                if let Ok(mut s) = self.audio.lock() {
-                                    s.tracks[i].mute = m;
-                                }
+                            if ui.toggle_value(&mut m, "M").changed()
+                                && let Ok(mut s) = self.audio.lock()
+                            {
+                                s.tracks[i].mute = m;
                             }
                             let mut so = solo;
-                            if ui.toggle_value(&mut so, "S").changed() {
-                                if let Ok(mut s) = self.audio.lock() {
-                                    s.tracks[i].solo = so;
-                                }
+                            if ui.toggle_value(&mut so, "S").changed()
+                                && let Ok(mut s) = self.audio.lock()
+                            {
+                                s.tracks[i].solo = so;
                             }
                             // 16 step buttons
                             for step_idx in 0..16 {
@@ -714,11 +714,10 @@ impl eframe::App for DawApp {
                                 } else if step_idx % 4 == 0 {
                                     btn = btn.fill(egui::Color32::from_rgb(55, 55, 60));
                                 }
-                                if ui.add(btn).clicked() {
-                                    if let Ok(mut s) = self.audio.lock() {
-                                        s.tracks[i].pattern[step_idx] =
-                                            !s.tracks[i].pattern[step_idx];
-                                    }
+                                if ui.add(btn).clicked()
+                                    && let Ok(mut s) = self.audio.lock()
+                                {
+                                    s.tracks[i].pattern[step_idx] = !s.tracks[i].pattern[step_idx];
                                 }
                             }
                         });
@@ -734,10 +733,10 @@ impl eframe::App for DawApp {
                     ui.heading("Channel editor (fundsp)");
                     {
                         let sel = self.selected;
-                        if let Ok(s) = self.audio.lock() {
-                            if sel >= s.tracks.len() {
-                                return;
-                            }
+                        if let Ok(s) = self.audio.lock()
+                            && sel >= s.tracks.len()
+                        {
+                            return;
                         }
                         // read snapshot
                         let snap = {
@@ -795,18 +794,18 @@ impl eframe::App for DawApp {
                             if ui.button("♪ Test").clicked() {
                                 live_hit = Some(edited.midi_base);
                             }
-                            if ui.button("Randomize steps").clicked() {
-                                if let Ok(mut s) = self.audio.lock() {
-                                    use std::time::{SystemTime, UNIX_EPOCH};
-                                    let seed = SystemTime::now()
-                                        .duration_since(UNIX_EPOCH)
-                                        .map(|d| d.as_nanos() as u64)
-                                        .unwrap_or(12345);
-                                    let mut x = seed;
-                                    for st in 0..16 {
-                                        x = x.wrapping_mul(6364136223846793005).wrapping_add(37);
-                                        s.tracks[sel].pattern[st] = (x >> 33).is_multiple_of(3);
-                                    }
+                            if ui.button("Randomize steps").clicked()
+                                && let Ok(mut s) = self.audio.lock()
+                            {
+                                use std::time::{SystemTime, UNIX_EPOCH};
+                                let seed = SystemTime::now()
+                                    .duration_since(UNIX_EPOCH)
+                                    .map(|d| d.as_nanos() as u64)
+                                    .unwrap_or(12345);
+                                let mut x = seed;
+                                for st in 0..16 {
+                                    x = x.wrapping_mul(6364136223846793005).wrapping_add(37);
+                                    s.tracks[sel].pattern[st] = (x >> 33).is_multiple_of(3);
                                 }
                             }
                         });
@@ -841,18 +840,16 @@ impl eframe::App for DawApp {
                                                 .text("vol"),
                                         )
                                         .changed()
+                                        && let Ok(mut s) = self.audio.lock()
                                     {
-                                        if let Ok(mut s) = self.audio.lock() {
-                                            s.tracks[i].volume = vol;
-                                        }
+                                        s.tracks[i].volume = vol;
                                     }
                                     if ui
                                         .add(egui::Slider::new(&mut pn, -1.0..=1.0).text("pan"))
                                         .changed()
+                                        && let Ok(mut s) = self.audio.lock()
                                     {
-                                        if let Ok(mut s) = self.audio.lock() {
-                                            s.tracks[i].pan = pn;
-                                        }
+                                        s.tracks[i].pan = pn;
                                     }
                                 });
                             }
@@ -924,12 +921,11 @@ impl eframe::App for DawApp {
             });
         });
 
-        if let Some(idx) = rebuild_idx {
-            if let Ok(mut s) = self.audio.lock() {
-                if idx < s.tracks.len() {
-                    s.rebuild_voice(idx);
-                }
-            }
+        if let Some(idx) = rebuild_idx
+            && let Ok(mut s) = self.audio.lock()
+            && idx < s.tracks.len()
+        {
+            s.rebuild_voice(idx);
         }
         if let Some(m) = live_hit {
             self.trigger_live(m);
