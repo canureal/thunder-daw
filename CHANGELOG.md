@@ -3,6 +3,16 @@
 Changes are listed per release, newest first.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v0.2.3] - 2026-10-06
+
+### Added
+
+- Double-click launch on all three systems: Windows MSI with Start Menu and
+  desktop shortcuts plus a license page, macOS app bundle in a
+  drag-to-Applications disk image, Linux AppImage
+- Windows release builds no longer open a console window
+- App icon (SVG, PNG, ICO, ICNS sources in `assets/`)
+
 ## [v0.2.2] - 2026-10-06
 
 ### Added
@@ -70,6 +80,7 @@ Initial release.
 - Audio thread drops to silence on lock contention (`Mutex::try_lock`)
 - Linux build needs ALSA/X11/Wayland dev packages (see README)
 
+[v0.2.3]: https://github.com/canureal/thunder-daw/releases/tag/v0.2.3
 [v0.2.2]: https://github.com/canureal/thunder-daw/releases/tag/v0.2.2
 [v0.2.1]: https://github.com/canureal/thunder-daw/releases/tag/v0.2.1
 [v0.2.0]: https://github.com/canureal/thunder-daw/releases/tag/v0.2.0

@@ -1,3 +1,10 @@
+// GUI app: no console window on Windows double-click. Terminal users still
+// see stdout/stderr in their own console; only release builds detach.
+#![cfg_attr(
+    all(target_os = "windows", not(debug_assertions)),
+    windows_subsystem = "windows"
+)]
+
 mod engine;
 mod export;
 mod song;

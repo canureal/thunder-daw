@@ -86,6 +86,10 @@
         <Property Id='DiskPrompt' Value='thunder-daw Installation'/>
 
         <Directory Id='TARGETDIR' Name='SourceDir'>
+            <Directory Id='ProgramMenuFolder'>
+                <Directory Id='ApplicationProgramsFolder' Name='thunder-daw'/>
+            </Directory>
+            <Directory Id='DesktopFolder'/>
             <Directory Id='$(var.PlatformProgramFilesFolder)' Name='PFiles'>
                 <Directory Id='APPLICATIONFOLDER' Name='thunder-daw'>
                     
@@ -128,6 +132,39 @@
                                 Source='$(var.CargoTargetBinDir)\thunder-daw.exe'
                                 KeyPath='yes'/>
                         </Component>
+                        <Component Id='StartMenuShortcutComp' Guid='*'>
+                            <Shortcut
+                                Id='StartMenuThunder'
+                                Name='thunder-daw'
+                                Description='Small FL-style DAW'
+                                Target='[Bin]thunder-daw.exe'
+                                WorkingDirectory='APPLICATIONFOLDER'
+                                Icon='AppICO'/>
+                            <RemoveFolder Id='ApplicationProgramsFolder' On='uninstall'/>
+                            <RegistryValue
+                                Root='HKCU'
+                                Key='Software\thunder-daw'
+                                Name='startmenu'
+                                Type='integer'
+                                Value='1'
+                                KeyPath='yes'/>
+                        </Component>
+                        <Component Id='DesktopShortcutComp' Guid='*'>
+                            <Shortcut
+                                Id='DesktopThunder'
+                                Name='thunder-daw'
+                                Description='Small FL-style DAW'
+                                Target='[Bin]thunder-daw.exe'
+                                WorkingDirectory='APPLICATIONFOLDER'
+                                Icon='AppICO'/>
+                            <RegistryValue
+                                Root='HKCU'
+                                Key='Software\thunder-daw'
+                                Name='desktop'
+                                Type='integer'
+                                Value='1'
+                                KeyPath='yes'/>
+                        </Component>
                     </Directory>
                 </Directory>
             </Directory>
@@ -152,6 +189,24 @@
             <ComponentRef Id='binary0'/>
 
             <Feature
+                Id='StartMenu'
+                Title='Start Menu shortcut'
+                Description='Adds thunder-daw to the Start Menu.'
+                Level='1'
+                Absent='allow'>
+                <ComponentRef Id='StartMenuShortcutComp'/>
+            </Feature>
+
+            <Feature
+                Id='DesktopShortcut'
+                Title='Desktop shortcut'
+                Description='Puts a thunder-daw icon on the desktop for double-click launching.'
+                Level='1'
+                Absent='allow'>
+                <ComponentRef Id='DesktopShortcutComp'/>
+            </Feature>
+
+            <Feature
                 Id='Environment'
                 Title='PATH Environment Variable'
                 Description='Add the install location of the [ProductName] executable to the PATH system environment variable. This allows the [ProductName] executable to be called from any location.'
@@ -170,8 +225,8 @@
           The product icon is the graphic that appears in the Add/Remove
           Programs control panel for the application.
         -->
-        <!--<Icon Id='ProductICO' SourceFile='wix\Product.ico'/>-->
-        <!--<Property Id='ARPPRODUCTICON' Value='ProductICO' />-->
+        <Icon Id='AppICO' SourceFile='..\assets\icon.ico'/>
+        <Property Id='ARPPRODUCTICON' Value='AppICO' />
 
         <Property Id='ARPHELPLINK' Value='https://canureal.github.io/thunder-daw/'/>
         
@@ -188,8 +243,7 @@
                    the path to a RTF file that will be used as the EULA and
                    displayed in the license agreement dialog.
             -->
-            <Publish Dialog='WelcomeDlg' Control='Next' Event='NewDialog' Value='CustomizeDlg' Order='99'>1</Publish>
-            <Publish Dialog='CustomizeDlg' Control='Back' Event='NewDialog' Value='WelcomeDlg' Order='99'>1</Publish>
+            <WixVariable Id='WixUILicenseRtf' Value='eula.rtf'/>
 
         </UI>
 

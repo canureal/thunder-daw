@@ -1,0 +1,106 @@
+name: package
+
+# Runs after cargo-dist publishes a release. Repackages the plain
+# archives into double-clickable formats and uploads them back:
+# macOS .app bundle inside a drag-to-Applications DMG, Linux AppImage.
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  mac-dmg:
+    runs-on: macos-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Get version from tag
+        run: echo "VERSION=${TAG#v}" >> "$GITHUB_ENV"
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+      - name: Download macOS archives
+        run: |
+          mkdir -p pkgs app/ThunderDAW.app/Contents/MacOS app/ThunderDAW.app/Contents/Resources
+          gh release download "$TAG" --repo canureal/thunder-daw \
+            --pattern 'thunder-daw-*-apple-darwin.tar.xz' --dir pkgs
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+      - name: Assemble universal .app
+        run: |
+          mkdir -p x64 arm
+          tar -xf pkgs/thunder-daw-x86_64-apple-darwin.tar.xz -C x64
+          tar -xf pkgs/thunder-daw-aarch64-apple-darwin.tar.xz -C arm
+          lipo -create x64/thunder-daw arm/thunder-daw \
+            -output app/ThunderDAW.app/Contents/MacOS/thunder-daw
+          chmod +x app/ThunderDAW.app/Contents/MacOS/thunder-daw
+          echo -n "APPLTDaw" > app/ThunderDAW.app/Contents/PkgInfo
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.release.tag_name }}
+          path: src
+      - name: Icon, plist and DMG
+        run: |
+          mkdir iconset.iconset
+          for s in 16 32 64 128 256 512; do
+            sips -z $s $s src/assets/icon-1024.png --out iconset.iconset/icon_${s}x${s}.png >/dev/null
+          done
+          cp iconset.iconset/icon_512x512.png iconset.iconset/icon_256x256@2x.png
+          sips -z 1024 1024 src/assets/icon-1024.png --out iconset.iconset/icon_1024x1024.png >/dev/null
+          iconutil -c icns iconset.iconset -o app/ThunderDAW.app/Contents/Resources/ThunderDAW.icns
+          sed "s/@VERSION@/$VERSION/" src/assets/Info.plist \
+            > app/ThunderDAW.app/Contents/Info.plist
+          mkdir -p dmg
+          cp -R app/ThunderDAW.app dmg/
+          ln -s /Applications dmg/Applications
+          hdiutil create -volname ThunderDAW -srcfolder dmg -ov -format UDZO \
+            ThunderDAW-$VERSION-macos.dmg
+      - name: Upload DMG
+        run: |
+          gh release upload "$TAG" "ThunderDAW-$VERSION-macos.dmg" \
+            --repo canureal/thunder-daw --clobber
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+
+  linux-appimage:
+    runs-on: ubuntu-22.04
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Get version from tag
+        run: echo "VERSION=${TAG#v}" >> "$GITHUB_ENV"
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+      - name: Download Linux archive
+        run: |
+          mkdir -p pkg AppDir/usr/bin
+          gh release download "$TAG" --repo canureal/thunder-daw \
+            --pattern 'thunder-daw-x86_64-unknown-linux-gnu.tar.xz' --dir pkg
+          tar -xf pkg/thunder-daw-x86_64-unknown-linux-gnu.tar.xz -C pkg
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.release.tag_name }}
+          path: src
+      - name: Assemble AppDir
+        run: |
+          cp pkg/thunder-daw AppDir/usr/bin/
+          cp src/assets/thunder-daw.desktop AppDir/
+          cp src/assets/icon-256.png AppDir/thunder-daw.png
+          printf '#!/bin/sh\nexec "$APPDIR/usr/bin/thunder-daw" "$@"\n' > AppDir/AppRun
+          chmod +x AppDir/AppRun AppDir/usr/bin/thunder-daw
+      - name: Build AppImage
+        run: |
+          curl -LsSf -o appimagetool \
+            https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
+          chmod +x appimagetool
+          ./appimagetool --appimage-extract-and-run AppDir \
+            "thunder-daw-$VERSION-x86_64.AppImage"
+      - name: Upload AppImage
+        run: |
+          gh release upload "$TAG" "thunder-daw-$VERSION-x86_64.AppImage" \
+            --repo canureal/thunder-daw --clobber
+        env:
+          TAG: ${{ github.event.release.tag_name }}

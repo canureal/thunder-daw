@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleExecutable</key>
+  <string>thunder-daw</string>
+  <key>CFBundleIconFile</key>
+  <string>ThunderDAW</string>
+  <key>CFBundleIdentifier</key>
+  <string>com.canureal.thunderdaw</string>
+  <key>CFBundleName</key>
+  <string>ThunderDAW</string>
+  <key>CFBundleDisplayName</key>
+  <string>ThunderDAW</string>
+  <key>CFBundleShortVersionString</key>
+  <string>@VERSION@</string>
+  <key>CFBundleVersion</key>
+  <string>@VERSION@</string>
+  <key>CFBundlePackageType</key>
+  <string>APPL</string>
+  <key>CFBundleSignature</string>
+  <string>TDaw</string>
+  <key>LSMinimumSystemVersion</key>
+  <string>11.0</string>
+  <key>NSHighResolutionCapable</key>
+  <true/>
+</dict>
+</plist>

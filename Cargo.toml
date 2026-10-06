@@ -1,6 +1,6 @@
 [package]
 name = "thunder-daw"
-version = "0.2.2"
+version = "0.2.3"
 edition = "2024"
 description = "A small FL Studio-style DAW in Rust"
 authors = ["thunder-daw contributors"]
@@ -30,6 +30,7 @@ lto = "thin"
 
 [workspace.metadata.dist]
 cargo-dist-version = "0.32.0"
+allow-dirty = ["msi"]
 rust-version = "1.99.0"
 ci = ["github"]
 targets = [
