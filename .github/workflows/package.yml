@@ -4,29 +4,40 @@ name: package
 # archives into double-clickable formats and uploads them back:
 # macOS .app bundle inside a drag-to-Applications DMG, Linux AppImage.
 on:
-  release:
-    types: [published]
+  # Manual runs (used to backfill a release) and automatic runs after the
+  # Release workflow finishes. NOTE: this cannot use `release: published`
+  # because releases created with GITHUB_TOKEN do not emit that event.
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to package (e.g. v0.2.3)"
+        required: true
+  workflow_run:
+    workflows: ["Release"]
+    types: [completed]
 
 permissions:
   contents: write
 
 jobs:
   mac-dmg:
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && startsWith(github.event.workflow_run.head_branch, 'v')) }}
     runs-on: macos-latest
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      TAG: ${{ github.event.inputs.tag || github.event.workflow_run.head_branch }}
     steps:
+      - name: Check the release exists
+        run: gh release view "$TAG" --repo canureal/thunder-daw --json tagName
       - name: Get version from tag
         run: echo "VERSION=${TAG#v}" >> "$GITHUB_ENV"
         env:
-          TAG: ${{ github.event.release.tag_name }}
       - name: Download macOS archives
         run: |
           mkdir -p pkgs app/ThunderDAW.app/Contents/MacOS app/ThunderDAW.app/Contents/Resources
           gh release download "$TAG" --repo canureal/thunder-daw \
             --pattern 'thunder-daw-*-apple-darwin.tar.xz' --dir pkgs
         env:
-          TAG: ${{ github.event.release.tag_name }}
       - name: Assemble universal .app
         run: |
           mkdir -p x64 arm
@@ -38,7 +49,7 @@ jobs:
           echo -n "APPLTDaw" > app/ThunderDAW.app/Contents/PkgInfo
       - uses: actions/checkout@v5
         with:
-          ref: ${{ github.event.release.tag_name }}
+          ref: ${{ env.TAG }}
           path: src
       - name: Icon, plist and DMG
         run: |
@@ -61,17 +72,19 @@ jobs:
           gh release upload "$TAG" "ThunderDAW-$VERSION-macos.dmg" \
             --repo canureal/thunder-daw --clobber
         env:
-          TAG: ${{ github.event.release.tag_name }}
 
   linux-appimage:
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && startsWith(github.event.workflow_run.head_branch, 'v')) }}
     runs-on: ubuntu-22.04
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      TAG: ${{ github.event.inputs.tag || github.event.workflow_run.head_branch }}
     steps:
+      - name: Check the release exists
+        run: gh release view "$TAG" --repo canureal/thunder-daw --json tagName
       - name: Get version from tag
         run: echo "VERSION=${TAG#v}" >> "$GITHUB_ENV"
         env:
-          TAG: ${{ github.event.release.tag_name }}
       - name: Download Linux archive
         run: |
           mkdir -p pkg AppDir/usr/bin
@@ -79,10 +92,9 @@ jobs:
             --pattern 'thunder-daw-x86_64-unknown-linux-gnu.tar.xz' --dir pkg
           tar -xf pkg/thunder-daw-x86_64-unknown-linux-gnu.tar.xz -C pkg
         env:
-          TAG: ${{ github.event.release.tag_name }}
       - uses: actions/checkout@v5
         with:
-          ref: ${{ github.event.release.tag_name }}
+          ref: ${{ env.TAG }}
           path: src
       - name: Assemble AppDir
         run: |
@@ -103,4 +115,3 @@ jobs:
           gh release upload "$TAG" "thunder-daw-$VERSION-x86_64.AppImage" \
             --repo canureal/thunder-daw --clobber
         env:
-          TAG: ${{ github.event.release.tag_name }}
