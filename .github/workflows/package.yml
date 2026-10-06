@@ -31,13 +31,11 @@ jobs:
         run: gh release view "$TAG" --repo canureal/thunder-daw --json tagName
       - name: Get version from tag
         run: echo "VERSION=${TAG#v}" >> "$GITHUB_ENV"
-        env:
       - name: Download macOS archives
         run: |
           mkdir -p pkgs app/ThunderDAW.app/Contents/MacOS app/ThunderDAW.app/Contents/Resources
           gh release download "$TAG" --repo canureal/thunder-daw \
             --pattern 'thunder-daw-*-apple-darwin.tar.xz' --dir pkgs
-        env:
       - name: Assemble universal .app
         run: |
           mkdir -p x64 arm
@@ -71,7 +69,6 @@ jobs:
         run: |
           gh release upload "$TAG" "ThunderDAW-$VERSION-macos.dmg" \
             --repo canureal/thunder-daw --clobber
-        env:
 
   linux-appimage:
     if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && startsWith(github.event.workflow_run.head_branch, 'v')) }}
@@ -84,14 +81,12 @@ jobs:
         run: gh release view "$TAG" --repo canureal/thunder-daw --json tagName
       - name: Get version from tag
         run: echo "VERSION=${TAG#v}" >> "$GITHUB_ENV"
-        env:
       - name: Download Linux archive
         run: |
           mkdir -p pkg AppDir/usr/bin
           gh release download "$TAG" --repo canureal/thunder-daw \
             --pattern 'thunder-daw-x86_64-unknown-linux-gnu.tar.xz' --dir pkg
           tar -xf pkg/thunder-daw-x86_64-unknown-linux-gnu.tar.xz -C pkg
-        env:
       - uses: actions/checkout@v5
         with:
           ref: ${{ env.TAG }}
@@ -114,4 +109,3 @@ jobs:
         run: |
           gh release upload "$TAG" "thunder-daw-$VERSION-x86_64.AppImage" \
             --repo canureal/thunder-daw --clobber
-        env:
