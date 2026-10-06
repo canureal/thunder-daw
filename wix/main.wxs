@@ -139,7 +139,7 @@
                                 Description='Small FL-style DAW'
                                 Target='[Bin]thunder-daw.exe'
                                 WorkingDirectory='APPLICATIONFOLDER'/>
-                            <RemoveFolder Id='ApplicationProgramsFolder' On='uninstall'/>
+                            <RemoveFolder Id='RemoveAppProgramsFolder' Directory='ApplicationProgramsFolder' On='uninstall'/>
                             <RegistryValue
                                 Root='HKCU'
                                 Key='Software\thunder-daw'
