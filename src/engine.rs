@@ -294,6 +294,8 @@ pub struct EngineRt {
     /// Export helper: stop at arrangement end even when the song loops.
     pub ignore_loop: bool,
     pub peak: f32,
+    /// Per-channel post-fader peak, decaying. Feeds the mixer meters.
+    pub ch_peaks: Vec<f32>,
     pub scope: Vec<f32>,
     scope_pos: usize,
     scope_tick: usize,
@@ -339,6 +341,7 @@ impl EngineRt {
             pattern: 0,
             ignore_loop: false,
             peak: 0.0,
+            ch_peaks: Vec::new(),
             scope: vec![0.0; SCOPE_LEN],
             scope_pos: 0,
             scope_tick: 0,
@@ -401,6 +404,7 @@ impl EngineRt {
             self.voices.push(pool);
         }
         self.auto_vol = vec![1.0; song.channels.len()];
+        self.ch_peaks = vec![0.0; song.channels.len()];
     }
 
     /// Rebuild one channel's pool (wave / Q / ADSR changed).
@@ -667,14 +671,21 @@ impl EngineRt {
             let vol_auto = self.auto_vol.get(ci).copied().unwrap_or(1.0);
             let fader = channel.volume * vol_auto;
             let (lg, rg) = pan_gains(channel.pan, fader);
+            let mut cl = 0.0f32;
+            let mut cr = 0.0f32;
             if ci < self.voices.len() {
                 for v in self.voices[ci].iter_mut() {
                     let (vl, vr) = v.unit.get_stereo();
-                    l += vl * lg * v.vel;
-                    r += vr * rg * v.vel;
-                    send +=
-                        (vl + vr) * 0.5 * lg.max(rg) * (channel.delay_send + channel.reverb_send);
+                    cl += vl * lg * v.vel;
+                    cr += vr * rg * v.vel;
                 }
+            }
+            l += cl;
+            r += cr;
+            send += (cl + cr) * 0.5 * (channel.delay_send + channel.reverb_send);
+            if ci < self.ch_peaks.len() {
+                let p = cl.abs().max(cr.abs());
+                self.ch_peaks[ci] = (self.ch_peaks[ci] * 0.94).max(p);
             }
         }
         {
@@ -785,6 +796,9 @@ impl EngineRt {
         self.live_off = 0;
         self.playheads.clear();
         self.metro_heads.clear();
+        for p in self.ch_peaks.iter_mut() {
+            *p = 0.0;
+        }
     }
 }
 

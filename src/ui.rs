@@ -32,14 +32,29 @@ impl ScaleKind {
             ScaleKind::PentMin => "Pent Min",
         }
     }
-    fn contains(&self, pc: u8) -> bool {
+    fn contains(&self, pc: u8, root: u8) -> bool {
+        let rel = (12 + pc as i32 - (root % 12) as i32) % 12;
         match self {
             ScaleKind::Chromatic => true,
-            ScaleKind::Major => matches!(pc, 0 | 2 | 4 | 5 | 7 | 9 | 11),
-            ScaleKind::Minor => matches!(pc, 0 | 2 | 3 | 5 | 7 | 8 | 10),
-            ScaleKind::PentMaj => matches!(pc, 0 | 2 | 4 | 7 | 9),
-            ScaleKind::PentMin => matches!(pc, 0 | 3 | 5 | 7 | 10),
+            ScaleKind::Major => matches!(rel, 0 | 2 | 4 | 5 | 7 | 9 | 11),
+            ScaleKind::Minor => matches!(rel, 0 | 2 | 3 | 5 | 7 | 8 | 10),
+            ScaleKind::PentMaj => matches!(rel, 0 | 2 | 4 | 7 | 9),
+            ScaleKind::PentMin => matches!(rel, 0 | 3 | 5 | 7 | 10),
         }
+    }
+    /// Nearest pitch at or below `midi` that sits in the scale.
+    fn snap_midi(&self, midi: u8, root: u8) -> u8 {
+        if *self == ScaleKind::Chromatic {
+            return midi;
+        }
+        let mut m = midi;
+        for _ in 0..12 {
+            if self.contains(m % 12, root) {
+                return m;
+            }
+            m = m.saturating_sub(1).max(21);
+        }
+        midi
     }
 }
 
@@ -48,6 +63,26 @@ enum ChordMode {
     Off,
     Maj,
     Min,
+}
+
+/// FL-style piano roll tools. Draw places notes, Erase removes them with
+/// left-click, Hear plays pitches without writing anything.
+#[derive(Clone, Copy, PartialEq, Eq, Default)]
+enum PianoTool {
+    #[default]
+    Draw,
+    Erase,
+    Hear,
+}
+
+impl PianoTool {
+    fn name(&self) -> &'static str {
+        match self {
+            PianoTool::Draw => "Draw",
+            PianoTool::Erase => "Erase",
+            PianoTool::Hear => "Hear",
+        }
+    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -65,11 +100,21 @@ enum DragKind {
 pub struct AppUi {
     pub sel_ch: usize,
     pub sel_pat: usize,
+    // FL-style window visibility (toolbar view toggles).
+    pub show_browser: bool,
+    pub show_rack: bool,
+    pub show_piano: bool,
+    pub show_playlist: bool,
+    pub show_mixer: bool,
+    tool: PianoTool,
     piano_bot: u8,
     snap: u32,
     scale: ScaleKind,
+    root: u8,
+    snap_scale: bool,
     chord: ChordMode,
     sel_note: Option<usize>,
+    prop_note: Option<usize>,
     drag: Option<(usize, DragKind, i32, i32)>,
     pending_add: Option<(u32, u8)>,
     auto_sel: AutoSel,
@@ -89,11 +134,20 @@ impl Default for AppUi {
         Self {
             sel_ch: 4,
             sel_pat: 0,
+            show_browser: true,
+            show_rack: true,
+            show_piano: true,
+            show_playlist: true,
+            show_mixer: true,
+            tool: PianoTool::Draw,
             piano_bot: 40,
             snap: 4,
             scale: ScaleKind::Major,
+            root: 0,
+            snap_scale: false,
             chord: ChordMode::Off,
             sel_note: None,
+            prop_note: None,
             drag: None,
             pending_add: None,
             auto_sel: AutoSel::Vol,
@@ -157,6 +211,43 @@ fn home_music_dir() -> String {
 
 pub fn transport(ui: &mut AppUi, s: &mut AppState, u: &mut egui::Ui) {
     u.horizontal(|u| {
+        // FL window toggles: browser, rack, piano, playlist, mixer.
+        let mut v = ui.show_browser;
+        if u.toggle_value(&mut v, "Files")
+            .on_hover_text("Browser (F8)")
+            .changed()
+        {
+            ui.show_browser = v;
+        }
+        let mut v = ui.show_rack;
+        if u.toggle_value(&mut v, "Rack")
+            .on_hover_text("Channel rack (F6)")
+            .changed()
+        {
+            ui.show_rack = v;
+        }
+        let mut v = ui.show_piano;
+        if u.toggle_value(&mut v, "Piano")
+            .on_hover_text("Piano roll (F7)")
+            .changed()
+        {
+            ui.show_piano = v;
+        }
+        let mut v = ui.show_playlist;
+        if u.toggle_value(&mut v, "List")
+            .on_hover_text("Playlist (F5)")
+            .changed()
+        {
+            ui.show_playlist = v;
+        }
+        let mut v = ui.show_mixer;
+        if u.toggle_value(&mut v, "Mix")
+            .on_hover_text("Mixer (F9)")
+            .changed()
+        {
+            ui.show_mixer = v;
+        }
+        u.separator();
         let mut playing = s.rt.playing;
         if u.button(if playing { "⏹ Stop" } else { "▶ Play" })
             .clicked()
@@ -435,17 +526,53 @@ pub fn piano_roll(ui: &mut AppUi, s: &mut AppState, u: &mut egui::Ui) {
     let pat = ui.sel_pat;
     u.horizontal(|u| {
         u.heading(format!(
-            "Piano roll — {} / P{}",
+            "Piano roll : {} / P{}",
             s.song.channels[ch].name,
             pat + 1
         ));
+        // FL-style tool modes: draw writes, erase deletes, hear only plays.
+        for tool in [PianoTool::Draw, PianoTool::Erase, PianoTool::Hear] {
+            if u.selectable_label(ui.tool == tool, tool.name())
+                .on_hover_text(match tool {
+                    PianoTool::Draw => "Draw: click adds a note, drag moves it (P)",
+                    PianoTool::Erase => "Erase: left-click deletes notes (D)",
+                    PianoTool::Hear => "Hear: click plays pitches, writes nothing (Y)",
+                })
+                .clicked()
+            {
+                ui.tool = tool;
+            }
+        }
+        // Target channel: switch instrument without leaving the piano roll.
+        let mut target = ch;
+        egui::ComboBox::from_id_salt("target_ch")
+            .selected_text(s.song.channels[ch].name.clone())
+            .show_ui(u, |u| {
+                for (i, c) in s.song.channels.iter().enumerate() {
+                    let tick = s.song.patterns[pat]
+                        .notes
+                        .get(i)
+                        .map(|ns| !ns.is_empty())
+                        .unwrap_or(false);
+                    u.selectable_value(
+                        &mut target,
+                        i,
+                        format!("{}{}", if tick { "● " } else { "" }, c.name),
+                    );
+                }
+            });
+        if target != ch {
+            ui.sel_ch = target;
+            ui.sel_note = None;
+            ui.prop_note = None;
+            return;
+        }
         if u.button("Quant")
             .on_hover_text("Snap starts to grid")
             .clicked()
+            && let Some(notes) = s.song.patterns[pat].notes.get_mut(ch)
         {
-            if let Some(notes) = s.song.patterns[pat].notes.get_mut(ch) {
-                tool_quantize(notes, ui.snap);
-            }
+            tool_quantize(notes, ui.snap);
             ui.status = "quantized".into();
         }
         if u.button("Human")
@@ -461,19 +588,18 @@ pub fn piano_roll(ui: &mut AppUi, s: &mut AppState, u: &mut egui::Ui) {
             }
             ui.status = "humanized".into();
         }
-        if u.button("Strum").on_hover_text("Spread chords").clicked() {
-            if let Some(notes) = s.song.patterns[pat].notes.get_mut(ch) {
-                tool_strum(notes, 2);
-            }
+        if u.button("Strum").on_hover_text("Spread chords").clicked()
+            && let Some(notes) = s.song.patterns[pat].notes.get_mut(ch)
+        {
+            tool_strum(notes, 2);
             ui.status = "strummed".into();
         }
         if u.button("Arp")
             .on_hover_text("16th arpeggio from pitches")
             .clicked()
+            && let Some(notes) = s.song.patterns[pat].notes.get_mut(ch)
         {
-            if let Some(notes) = s.song.patterns[pat].notes.get_mut(ch) {
-                tool_arpeggiate(notes);
-            }
+            tool_arpeggiate(notes);
             ui.status = "arpeggiated".into();
         }
         if u.button("Chord: off").clicked() {
@@ -534,6 +660,23 @@ pub fn piano_roll(ui: &mut AppUi, s: &mut AppState, u: &mut egui::Ui) {
                 }
             });
         ui.scale = sc;
+        u.label("Root:");
+        let mut root = ui.root;
+        egui::ComboBox::from_id_salt("root")
+            .selected_text(NOTE_NAMES[(root % 12) as usize])
+            .show_ui(u, |u| {
+                for r in 0u8..12 {
+                    u.selectable_value(&mut root, r, NOTE_NAMES[r as usize]);
+                }
+            });
+        ui.root = root;
+        let mut snap_scale = ui.snap_scale;
+        if u.toggle_value(&mut snap_scale, "ScaleSnap")
+            .on_hover_text("Force added and moved notes into the scale")
+            .changed()
+        {
+            ui.snap_scale = snap_scale;
+        }
         let mut bot = ui.piano_bot;
         u.add(egui::Slider::new(&mut bot, 21..=72).text("Octave"));
         ui.piano_bot = bot;
@@ -558,7 +701,7 @@ pub fn piano_roll(ui: &mut AppUi, s: &mut AppState, u: &mut egui::Ui) {
     for r in 0..rows {
         let midi = midi_hi - r as u8;
         let y = rect.min.y + r as f32 * cell_h;
-        let in_scale = ui.scale.contains(midi % 12);
+        let in_scale = ui.scale.contains(midi % 12, ui.root);
         let row_col = if !in_scale {
             egui::Color32::from_gray(22)
         } else if midi.is_multiple_of(12) {
@@ -685,48 +828,72 @@ pub fn piano_roll(ui: &mut AppUi, s: &mut AppState, u: &mut egui::Ui) {
         if let Some(pos) = resp.hover_pos() {
             let t = tick_at(pos.x);
             let m = midi_at(pos.y);
-            if (0..64).contains(&t) && m >= midi_lo as i32 && m <= midi_hi as i32 {
+            // FL preview keyboard: the key strip plays instead of editing.
+            if pos.x < rect.min.x + KEY_W {
+                if m >= midi_lo as i32 && m <= midi_hi as i32 {
+                    s.rt.live_note(m as u8);
+                }
+            } else if (0..64).contains(&t) && m >= midi_lo as i32 && m <= midi_hi as i32 {
                 if let Some(idx) = hit_note(t, m) {
-                    let n = &notes_snapshot[idx];
-                    let right_edge = x_of(n.tick + n.len);
-                    let kind = if pos.x > right_edge - 7.0 {
-                        DragKind::Resize
+                    // Erase tool deletes on press, like FL's delete tool.
+                    if ui.tool == PianoTool::Erase
+                        && let Some(notes) = s.song.patterns[pat].notes.get_mut(ch)
+                        && idx < notes.len()
+                    {
+                        notes.remove(idx);
+                        ui.sel_note = None;
+                    } else if ui.tool == PianoTool::Hear {
+                        // Hear tool only plays the pitch.
+                        s.rt.live_note(m as u8);
                     } else {
-                        DragKind::Move
-                    };
-                    ui.drag = Some((idx, kind, t - n.tick as i32, m - n.midi as i32));
-                    ui.sel_note = Some(idx);
-                } else {
+                        let n = &notes_snapshot[idx];
+                        let right_edge = x_of(n.tick + n.len);
+                        let kind = if pos.x > right_edge - 7.0 {
+                            DragKind::Resize
+                        } else {
+                            DragKind::Move
+                        };
+                        ui.drag = Some((idx, kind, t - n.tick as i32, m - n.midi as i32));
+                        ui.sel_note = Some(idx);
+                    }
+                } else if ui.tool == PianoTool::Draw {
                     let snap_t =
                         ((t / ui.snap.max(1) as i32) * ui.snap.max(1) as i32).clamp(0, 63) as u32;
-                    ui.pending_add = Some((snap_t, m as u8));
+                    let mp = m as u8;
+                    let mp = if ui.snap_scale {
+                        ui.scale.snap_midi(mp, ui.root)
+                    } else {
+                        mp
+                    };
+                    ui.pending_add = Some((snap_t, mp));
+                } else if ui.tool == PianoTool::Hear {
+                    s.rt.live_note(m as u8);
                 }
             }
         }
     }
-    if resp.dragged() {
-        if let Some((idx, kind, gt, gm)) = ui.drag.take() {
-            if let Some(pos) = resp.hover_pos() {
-                let t = tick_at(pos.x);
-                let m = midi_at(pos.y);
-                if let Some(notes) = s.song.patterns[pat].notes.get_mut(ch)
-                    && let Some(n) = notes.get_mut(idx)
-                {
-                    match kind {
-                        DragKind::Move => {
-                            n.tick = (t - gt).clamp(0, 63) as u32;
-                            n.midi = (m - gm).clamp(21, 108) as u8;
-                        }
-                        DragKind::Resize => {
-                            n.len = (t - n.tick as i32 + 1).clamp(1, 64) as u32;
-                        }
-                    }
+    if resp.dragged()
+        && let Some((idx, kind, gt, gm)) = ui.drag
+        && let Some(pos) = resp.hover_pos()
+    {
+        let t = tick_at(pos.x);
+        let m = midi_at(pos.y);
+        if let Some(notes) = s.song.patterns[pat].notes.get_mut(ch)
+            && let Some(n) = notes.get_mut(idx)
+        {
+            match kind {
+                DragKind::Move => {
+                    n.tick = (t - gt).clamp(0, 63) as u32;
+                    let target = (m - gm).clamp(21, 108) as u8;
+                    n.midi = if ui.snap_scale {
+                        ui.scale.snap_midi(target, ui.root)
+                    } else {
+                        target
+                    };
                 }
-            }
-            // Re-arm for continued dragging.
-            if let Some(pos) = resp.hover_pos() {
-                let _ = pos;
-                ui.drag = Some((idx, kind, gt, gm));
+                DragKind::Resize => {
+                    n.len = (t - n.tick as i32 + 1).clamp(1, 64) as u32;
+                }
             }
         }
     } else {
@@ -765,6 +932,16 @@ pub fn piano_roll(ui: &mut AppUi, s: &mut AppState, u: &mut egui::Ui) {
             ui.sel_note = None;
         }
     }
+    if resp.double_clicked()
+        && let Some(pos) = resp.hover_pos()
+    {
+        let t = tick_at(pos.x);
+        let m = midi_at(pos.y);
+        if (0..64).contains(&t) && m >= midi_lo as i32 && m <= midi_hi as i32 {
+            ui.prop_note = hit_note(t, m);
+            ui.sel_note = ui.prop_note;
+        }
+    }
     if u.ctx().input(|i| i.key_pressed(egui::Key::Delete))
         && let Some(idx) = ui.sel_note.take()
         && let Some(notes) = s.song.patterns[pat].notes.get_mut(ch)
@@ -775,6 +952,55 @@ pub fn piano_roll(ui: &mut AppUi, s: &mut AppState, u: &mut egui::Ui) {
 
     velocity_lane(s, ch, pat, u);
     automation_lane(ui, s, ch, pat, u);
+
+    // Note properties dialog (FL opens one on double-click).
+    if let Some(idx) = ui.prop_note {
+        let count = s.song.patterns[pat]
+            .notes
+            .get(ch)
+            .map(|ns| ns.len())
+            .unwrap_or(0);
+        if idx >= count {
+            ui.prop_note = None;
+        } else {
+            let mut close = false;
+            let mut remove = false;
+            egui::Window::new("Note")
+                .collapsible(false)
+                .show(u.ctx(), |w| {
+                    if let Some(notes) = s.song.patterns[pat].notes.get_mut(ch)
+                        && let Some(n) = notes.get_mut(idx)
+                    {
+                        w.label(format!("{} @ tick {}", note_label(n.midi), n.tick));
+                        w.add(egui::Slider::new(&mut n.vel, 0.05..=1.0).text("Velocity"));
+                        let mut len = n.len;
+                        w.add(egui::Slider::new(&mut len, 1..=64).text("Length"));
+                        n.len = len;
+                        let mut midi = n.midi;
+                        w.add(egui::Slider::new(&mut midi, 21..=108).text("Pitch"));
+                        n.midi = midi;
+                        if w.button("Delete note").clicked() {
+                            remove = true;
+                        }
+                        if w.button("Close").clicked() {
+                            close = true;
+                        }
+                    } else {
+                        close = true;
+                    }
+                });
+            if remove
+                && let Some(notes) = s.song.patterns[pat].notes.get_mut(ch)
+                && idx < notes.len()
+            {
+                notes.remove(idx);
+                ui.sel_note = None;
+            }
+            if remove || close {
+                ui.prop_note = None;
+            }
+        }
+    }
 }
 
 fn velocity_lane(s: &mut AppState, ch: usize, pat: usize, u: &mut egui::Ui) {
@@ -972,43 +1198,140 @@ fn automation_lane(ui: &mut AppUi, s: &mut AppState, ch: usize, pat: usize, u: &
 // Playlist
 // ---------------------------------------------------------------------------
 
-pub fn playlist(s: &mut AppState, u: &mut egui::Ui) {
+/// FL pattern colors, one per pattern slot.
+const CLIP_COLORS: [egui::Color32; 8] = [
+    egui::Color32::from_rgb(88, 160, 88),
+    egui::Color32::from_rgb(88, 130, 180),
+    egui::Color32::from_rgb(180, 130, 80),
+    egui::Color32::from_rgb(150, 100, 170),
+    egui::Color32::from_rgb(180, 90, 90),
+    egui::Color32::from_rgb(90, 160, 160),
+    egui::Color32::from_rgb(150, 170, 80),
+    egui::Color32::from_rgb(130, 130, 140),
+];
+
+pub fn playlist(ui: &mut AppUi, s: &mut AppState, u: &mut egui::Ui) {
     u.heading("Playlist (arrangement)");
-    let mut dirty_len: Option<usize> = None;
-    for bar in 0..s.song.arrangement.len() {
-        u.horizontal(|u| {
-            u.label(format!("Bar {}", bar + 1));
-            let mut v = s.song.arrangement[bar];
-            egui::ComboBox::from_id_salt(format!("arr{bar}"))
-                .selected_text(if v < 0 {
-                    "—".into()
+    // Clip lane: one block per bar, colored by pattern. Click selects the
+    // pattern, double-click opens it in the piano roll.
+    let bars = s.song.arrangement.len();
+    if bars > 0 {
+        let avail_w = u.available_width().max(200.0);
+        let cell_w = (avail_w / bars.max(1) as f32).clamp(24.0, 90.0);
+        let h = 44.0;
+        let (rect, resp) =
+            u.allocate_exact_size(egui::vec2(cell_w * bars as f32, h), egui::Sense::click());
+        let painter = u.painter_at(rect);
+        painter.rect_filled(rect, 2.0, egui::Color32::from_gray(16));
+        let play_bar = if s.rt.playing && s.rt.song_mode {
+            Some((s.rt.tick_pos.max(0.0) / 64.0) as usize)
+        } else {
+            None
+        };
+        for bar in 0..bars {
+            let x0 = rect.min.x + bar as f32 * cell_w;
+            let pat = s.song.arrangement[bar];
+            let col = if pat < 0 {
+                egui::Color32::from_gray(30)
+            } else {
+                CLIP_COLORS[(pat as usize) % 8]
+            };
+            let selected = pat >= 0 && pat as usize == ui.sel_pat;
+            painter.rect_filled(
+                egui::Rect::from_min_size(
+                    egui::pos2(x0 + 1.0, rect.min.y + 2.0),
+                    egui::vec2(cell_w - 2.0, h - 4.0),
+                ),
+                3.0,
+                if play_bar == Some(bar) {
+                    egui::Color32::LIGHT_GREEN
                 } else {
-                    format!("P{}", v + 1)
-                })
-                .show_ui(u, |u| {
-                    u.selectable_value(&mut v, -1, "—");
-                    for p in 0..N_PATTERNS as i32 {
-                        u.selectable_value(&mut v, p, format!("P{}", p + 1));
-                    }
-                });
-            s.song.arrangement[bar] = v;
-            if u.button("↑").clicked() && bar > 0 {
-                s.song.arrangement.swap(bar, bar - 1);
+                    col
+                },
+            );
+            if selected {
+                painter.rect_stroke(
+                    egui::Rect::from_min_size(
+                        egui::pos2(x0 + 1.0, rect.min.y + 2.0),
+                        egui::vec2(cell_w - 2.0, h - 4.0),
+                    ),
+                    3.0,
+                    egui::Stroke::new(2.0_f32, egui::Color32::YELLOW),
+                    egui::StrokeKind::Outside,
+                );
             }
-            if u.button("✕").clicked() {
-                dirty_len = Some(bar);
+            painter.text(
+                egui::pos2(x0 + cell_w * 0.5, rect.center().y),
+                egui::Align2::CENTER_CENTER,
+                if pat < 0 {
+                    "—".to_string()
+                } else {
+                    format!("P{}", pat + 1)
+                },
+                egui::FontId::proportional(12.0),
+                egui::Color32::BLACK,
+            );
+        }
+        if resp.clicked()
+            && let Some(pos) = resp.hover_pos()
+        {
+            let bar = ((pos.x - rect.min.x) / cell_w).floor() as usize;
+            if bar < bars {
+                let pat = s.song.arrangement[bar];
+                if pat >= 0 {
+                    ui.sel_pat = pat as usize;
+                    s.rt.pattern = pat as usize;
+                }
             }
-        });
+        }
+        if resp.double_clicked()
+            && let Some(pos) = resp.hover_pos()
+        {
+            let bar = ((pos.x - rect.min.x) / cell_w).floor() as usize;
+            if bar < bars {
+                let pat = s.song.arrangement[bar];
+                if pat >= 0 {
+                    ui.sel_pat = pat as usize;
+                    s.rt.pattern = pat as usize;
+                    ui.show_piano = true;
+                    ui.status = format!("editing P{}", pat + 1);
+                }
+            }
+        }
     }
+    // Bar editing row.
+    let mut dirty_len: Option<usize> = None;
+    u.horizontal(|u| {
+        u.label(format!("{} bars", s.song.arrangement.len()));
+        if u.button("+ Bar").clicked() {
+            s.song.arrangement.push(-1);
+        }
+        if u.button("- Bar").clicked() && !s.song.arrangement.is_empty() {
+            dirty_len = Some(s.song.arrangement.len() - 1);
+        }
+        let mut v = ui.sel_pat as i32;
+        egui::ComboBox::from_id_salt("arr_write")
+            .selected_text(format!("Write P{}", v + 1))
+            .show_ui(u, |u| {
+                for p in 0..N_PATTERNS as i32 {
+                    u.selectable_value(&mut v, p, format!("P{}", p + 1));
+                }
+            });
+        if v as usize != ui.sel_pat {
+            ui.sel_pat = v as usize;
+            s.rt.pattern = v as usize;
+        }
+        if u.button("Fill").clicked() {
+            for slot in s.song.arrangement.iter_mut() {
+                if *slot < 0 {
+                    *slot = v;
+                }
+            }
+        }
+    });
     if let Some(bar) = dirty_len {
         s.song.arrangement.remove(bar);
     }
-    u.horizontal(|u| {
-        if u.button("＋ Bar").clicked() {
-            s.song.arrangement.push(-1);
-        }
-        u.label(format!("{} bars", s.song.arrangement.len()));
-    });
 }
 
 // ---------------------------------------------------------------------------
@@ -1021,6 +1344,24 @@ pub fn mixer(s: &mut AppState, u: &mut egui::Ui) {
         for i in 0..s.song.channels.len() {
             u.vertical(|u| {
                 u.label(s.song.channels[i].name.clone());
+                let peak = s.rt.ch_peaks.get(i).copied().unwrap_or(0.0).clamp(0.0, 1.0);
+                let (mrect, _) = u.allocate_exact_size(egui::vec2(58.0, 7.0), egui::Sense::hover());
+                let mp = u.painter_at(mrect);
+                mp.rect_filled(mrect, 1.0, egui::Color32::from_gray(28));
+                if peak > 0.003 {
+                    let col = if peak > 0.9 {
+                        egui::Color32::from_rgb(220, 70, 60)
+                    } else if peak > 0.65 {
+                        egui::Color32::from_rgb(220, 180, 60)
+                    } else {
+                        egui::Color32::from_rgb(90, 200, 100)
+                    };
+                    mp.rect_filled(
+                        egui::Rect::from_min_size(mrect.min, egui::vec2(mrect.width() * peak, 7.0)),
+                        1.0,
+                        col,
+                    );
+                }
                 let mut vol = s.song.channels[i].volume;
                 if u.add(
                     egui::Slider::new(&mut vol, 0.0..=1.5)
