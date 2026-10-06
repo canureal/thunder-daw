@@ -3,58 +3,64 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>thunder-daw: a small FL-style DAW in Rust</title>
+<title>thunder-daw: make beats on your computer</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <header>
   <h1>thunder-daw</h1>
-  <p>A small FL Studio-style DAW written in Rust. Step sequencer, piano roll,
-  playlist, mixer. Nothing hosted, no account, files stay on your disk.</p>
+  <p>A free beat-making app for Windows, Mac and Linux.
+  No account, no cloud, your files stay on your disk.</p>
   <nav>
     <a href="index.html" aria-current="page">Home</a> ·
-    <a href="docs.html">Docs</a> ·
-    <a href="releases.html">Releases</a>
+    <a href="docs.html">How to use it</a> ·
+    <a href="releases.html">Download</a>
   </nav>
 </header>
 <main>
-  <section class="grid">
-    <div class="card"><strong>cpal 0.18</strong><span>audio in and out, all three desktop OSes</span></div>
-    <div class="card"><strong>egui 0.36</strong><span>interface drawn each frame, no retained widgets</span></div>
-    <div class="card"><strong>fundsp 0.23</strong><span>each voice is a live DSP graph</span></div>
+  <section>
+    <h2>Get it</h2>
+    <p>Linux or Mac, paste this in a terminal:</p>
+    <pre><code>curl --proto '=https' --tlsv1.2 -LsSf https://github.com/canureal/thunder-daw/releases/latest/download/thunder-daw-installer.sh | sh</code></pre>
+    <p>Windows, paste this in PowerShell:</p>
+    <pre><code>irm https://github.com/canureal/thunder-daw/releases/latest/download/thunder-daw-installer.ps1 | iex</code></pre>
+    <p>Then type <code>thunder-daw</code> to start it.</p>
   </section>
 
   <section>
-    <h2>What it does</h2>
+    <h2>Your first beat in two minutes</h2>
+    <ol>
+      <li>Press <strong>Play</strong>. You hear the demo groove.</li>
+      <li>In the channel rack, click the numbered boxes to turn kick,
+      snare and hat steps on and off.</li>
+      <li>Click a channel name, then draw notes in the piano roll.
+      Click empty space to add a note, drag one to move it, pull its
+      right edge to make it longer.</li>
+      <li>Open the playlist and line up patterns bar by bar to build a song.</li>
+      <li>Press <strong>Export</strong> next to WAV to save your mix as a file
+      you can send anyone.</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>What is inside</h2>
     <div class="grid">
-      <div class="card"><strong>Piano roll</strong><span>add, drag and resize notes. Velocity lane, ghost notes, scales, chord stamps. Quantize, humanize, strum, arpeggiate.</span></div>
-      <div class="card"><strong>Playlist</strong><span>eight patterns placed as one-bar clips. Play the arrangement or loop a single pattern.</span></div>
-      <div class="card"><strong>Instruments</strong><span>polyphonic synths with eight voices each, a synthesized drum kit, and a sampler that loads WAV, MP3 and OGG files.</span></div>
-      <div class="card"><strong>Mixer and FX</strong><span>per-channel delay and reverb sends, soft-clipped master bus, scope and peak meter.</span></div>
-      <div class="card"><strong>Automation</strong><span>volume and filter-cutoff lanes. The cutoff moves live with no audio dropouts.</span></div>
-      <div class="card"><strong>Song tools</strong><span>save and load projects as JSON, export a WAV mixdown or a MIDI file. Metronome, swing, tap tempo.</span></div>
+      <div class="card"><strong>Drums</strong><span>kick, snare, clap and hats ready to go, or load your own samples.</span></div>
+      <div class="card"><strong>Bass, lead, pads</strong><span>synth sounds you shape with cutoff, resonance and envelopes.</span></div>
+      <div class="card"><strong>Piano roll</strong><span>write melodies with the mouse. Scales light up so wrong notes stand out.</span></div>
+      <div class="card"><strong>Playlist</strong><span>eight patterns, arranged bar by bar into a full song.</span></div>
+      <div class="card"><strong>Mixer</strong><span>volume, pan and echo/reverb sends per instrument, plus a master section.</span></div>
+      <div class="card"><strong>Export</strong><span>save the mix as WAV or take the notes as a MIDI file into another app.</span></div>
     </div>
   </section>
 
   <section>
-    <h2>Install</h2>
-    <p>Linux or macOS, paste this in a terminal:</p>
-    <pre><code>curl --proto '=https' --tlsv1.2 -LsSf https://github.com/canureal/thunder-daw/releases/latest/download/thunder-daw-installer.sh | sh</code></pre>
-    <p>Windows, in PowerShell:</p>
-    <pre><code>irm https://github.com/canureal/thunder-daw/releases/latest/download/thunder-daw-installer.ps1 | iex</code></pre>
-    <p>Or build from source. Linux needs the audio and windowing headers first:</p>
-    <pre><code>git clone https://github.com/canureal/thunder-daw.git
-cd thunder-daw
-sudo apt install libasound2-dev libx11-dev libxkbcommon-dev libwayland-dev libegl-dev libgl-dev
-cargo run --release</code></pre>
-  </section>
-
-  <section>
-    <h2>Status and limits</h2>
-    <p>CI runs fmt, clippy, unit tests and a headless audio self-test on every
-    push. Dependabot keeps dependencies current. Known limits: eight fixed
-    channels, no plugin hosting, no audio recording. The
-    <a href="docs.html">docs page</a> lists all of it.</p>
+    <h2>Good to know</h2>
+    <ul>
+      <li>One project holds 8 instruments. Save it as a file and reopen it any time.</li>
+      <li>Building from source takes a Rust toolchain. Details are in the
+      <a href="https://github.com/canureal/thunder-daw">repo readme</a>.</li>
+    </ul>
   </section>
 </main>
 <footer>MIT · thunder-daw contributors · <a href="https://github.com/canureal/thunder-daw">GitHub</a></footer>

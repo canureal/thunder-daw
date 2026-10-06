@@ -3,63 +3,98 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>thunder-daw docs</title>
+<title>thunder-daw: how to use it</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <header>
-  <h1>thunder-daw docs</h1>
-  <p>How the program is put together, how to use it, and where it stands.</p>
+  <h1>How to use thunder-daw</h1>
+  <p>Everything below happens inside the app. Nothing to sign up for.</p>
   <nav>
     <a href="index.html">Home</a> ·
-    <a href="docs.html" aria-current="page">Docs</a> ·
-    <a href="releases.html">Releases</a>
+    <a href="docs.html" aria-current="page">How to use it</a> ·
+    <a href="releases.html">Download</a>
   </nav>
 </header>
 <main>
   <section>
-    <h2>Architecture</h2>
-    <p>The layout copies FL Studio: global channels hold the instruments,
-    patterns hold notes, the playlist orders patterns into a song, and the
-    mixer sets levels. One shared struct connects the audio thread (cpal) and
-    the interface thread (egui).</p>
-    <table>
-      <tr><th>Module</th><th>Job</th></tr>
-      <tr><td><code>song.rs</code></td><td>Channels, patterns, notes, automation, save/load, edit tools, unit tests</td></tr>
-      <tr><td><code>engine.rs</code></td><td>fundsp voice pools (8 per channel), kit and sampler playback, delay/reverb, tick scheduler</td></tr>
-      <tr><td><code>export.rs</code></td><td>WAV mixdown, hand-written type-0 MIDI writer</td></tr>
-      <tr><td><code>ui.rs</code></td><td>Transport, rack, piano roll, playlist, mixer, browser</td></tr>
-    </table>
-    <p>Each synth voice is one fundsp graph:</p>
-    <pre><code>((var(pitch) >> osc | var(cutoff) | dc(Q)) >> lowpass
-  * (var(gate) >> adsr_live)) >> pan</code></pre>
-    <p>Pitch, gate and cutoff travel through lock-free shared variables, so
-    automation moves the filter without rebuilding anything. The scheduler
-    counts whole samples, which keeps timing from drifting.</p>
+    <h2>Start and stop</h2>
+    <p>The top bar runs the show. <strong>Play</strong> starts, <strong>Stop</strong>
+    halts, <strong>Reset</strong> jumps back to the start. The numbers on the
+    right read bar, beat and tick so you always know where you are.</p>
+    <p><strong>Song</strong> plays your whole playlist. <strong>Pat</strong> loops
+    one pattern while you edit it. <strong>BPM</strong> sets the tempo, or tap
+    the <strong>Tap</strong> button along with a song in your head.
+    <strong>Swing</strong> loosens the timing for hip-hop feels.
+    <strong>Click</strong> turns the metronome on.</p>
   </section>
 
   <section>
-    <h2>Controls</h2>
-    <table>
-      <tr><th>Panel</th><th>Controls</th></tr>
-      <tr><td>Transport</td><td>Play, stop, reset. Song or pattern mode. BPM with tap tempo, swing, metronome, loop, master volume. Position reads bar:beat:tick.</td></tr>
-      <tr><td>Channel rack</td><td>Sixteen step buttons per channel. Mute, solo, wave or kit picker, base note, preview button.</td></tr>
-      <tr><td>Piano roll</td><td>Click adds a note, drag moves it, the right edge resizes it. Right-click or Delete removes it. Velocity and automation lanes sit below.</td></tr>
-      <tr><td>Playlist</td><td>One pattern clip per bar. Reorder, delete, add bars.</td></tr>
-      <tr><td>Mixer</td><td>Volume, pan, cutoff, delay and reverb sends per channel. Master delay time and mix, reverb mix.</td></tr>
-      <tr><td>Browser</td><td>Lists sample folders. Preview a file, load it into the selected channel, or paste a path.</td></tr>
-    </table>
+    <h2>Drums and steps</h2>
+    <p>Each row in the channel rack is one instrument. The sixteen boxes are
+    sixteenth notes in one bar. Click a box to switch that hit on or off.
+    <strong>M</strong> mutes the row, <strong>S</strong> solos it so you hear
+    it alone. The music note button plays the sound once so you can check it.</p>
   </section>
 
   <section>
-    <h2>Status</h2>
+    <h2>Melodies in the piano roll</h2>
+    <p>Click a channel name, and the piano roll below shows its notes.
+    Pitch runs up the left side, time runs left to right across one bar.</p>
     <ul>
-      <li>Dependencies are current: cpal 0.18, eframe/egui 0.36, fundsp 0.23, Rust edition 2024</li>
-      <li>CI checks formatting, lints, unit tests and a headless audio render</li>
-      <li>Tagged releases ship Linux, Windows and macOS builds with a changelog</li>
-      <li>This site rebuilds from <code>website/</code> on every push to <code>main</code></li>
-      <li>The audio thread drops to silence if it misses a lock. Fine for practice, not for stage use</li>
-      <li>Eight fixed channels. No plugin hosting, no audio recording, no MIDI hardware</li>
+      <li>Click empty space to place a note.</li>
+      <li>Drag a note to move it. Drag its right edge to change its length.</li>
+      <li>Right-click a note, or select it and press Delete, to remove it.</li>
+      <li>The strip underneath sets how hard each note hits. Drag the bars up or down.</li>
+      <li>The lane below that draws volume or filter curves across the bar.
+      Click to add a point, drag to move it, right-click to delete it.</li>
+    </ul>
+    <p>The toolbar above the roll holds the helpers: snap to grid, quantize
+    shaky timing, humanize for a played feel, strum chords, build an arpeggio
+    from your notes, stamp a major or minor chord, and shift everything an
+    octave. Keys outside your chosen scale are shaded darker.</p>
+  </section>
+
+  <section>
+    <h2>Arranging the song</h2>
+    <p>The playlist is a list of bars. Each bar plays one of your eight
+    patterns, or stays silent. Add bars with the button, pick a pattern per
+    bar, and press play in Song mode to hear it all in order. The loop switch
+    repeats the whole thing.</p>
+  </section>
+
+  <section>
+    <h2>Mixing</h2>
+    <p>Every instrument has volume and pan. <strong>Cut</strong> trims the
+    brightness, <strong>dly</strong> and <strong>verb</strong> send it to the
+    echo and the room sound. The master column sets echo time and how much of
+    each effect lands in the final mix. The green scope shows what is coming
+    out, and the bar next to the transport warns you before it clips.</p>
+  </section>
+
+  <section>
+    <h2>Your own sounds</h2>
+    <p>The browser lists sample files from your music folder. The play button
+    previews one, the arrow loads it into the selected channel, which then
+    behaves like any other instrument. You can also paste a file path and hit
+    load. WAV, MP3, OGG and FLAC all work.</p>
+  </section>
+
+  <section>
+    <h2>Saving and sharing</h2>
+    <p>Type a file name and press <strong>Save</strong> to keep the project,
+    <strong>Load</strong> to reopen it. The WAV export writes your full
+    arrangement to a mixdown file. The MIDI export writes the notes so you can
+    open them in any other music software.</p>
+  </section>
+
+  <section>
+    <h2>No sound?</h2>
+    <ul>
+      <li>Check your speakers and the system volume first.</li>
+      <li>On Linux, make sure an output device is selected in your sound settings.</li>
+      <li>If the app itself built from source has no audio at all, it is
+      usually missing the ALSA headers. Install them and rebuild.</li>
     </ul>
   </section>
 </main>

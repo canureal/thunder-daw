@@ -66,7 +66,3 @@ cargo run -- --offline-test
 The site in [`website/`](website/) deploys to GitHub Pages on every push to `main`.
 Releases live under [GitHub Releases](https://github.com/canureal/thunder-daw/releases)
 with the [changelog](CHANGELOG.md) in the repo.
-
-## Status
-
-See [PROD-READINESS](docs/PROD-READINESS.md) for what is done and what is missing.
