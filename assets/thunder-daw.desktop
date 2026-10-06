@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=thunder-daw
+Comment=Small FL-style DAW: step sequencer, piano roll, playlist, mixer
+Exec=thunder-daw
+Icon=thunder-daw
+Terminal=false
+Categories=AudioVideo;Audio;Music;Midi;
+Keywords=DAW;audio;music;sequencer;
+StartupNotify=true

@@ -3,6 +3,15 @@
 Changes are listed per release, newest first.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v0.2.2] - 2026-10-06
+
+### Added
+
+- Windows MSI installer with license page and Start Menu entry
+- Homebrew formula (`brew install canureal/tap/thunder-daw`)
+- Linux desktop entry and icon bundled in archives
+- Custom install message pointing at the `thunder-daw` command
+
 ## [v0.2.1] - 2026-10-06
 
 ### Added
@@ -61,6 +70,7 @@ Initial release.
 - Audio thread drops to silence on lock contention (`Mutex::try_lock`)
 - Linux build needs ALSA/X11/Wayland dev packages (see README)
 
+[v0.2.2]: https://github.com/canureal/thunder-daw/releases/tag/v0.2.2
 [v0.2.1]: https://github.com/canureal/thunder-daw/releases/tag/v0.2.1
 [v0.2.0]: https://github.com/canureal/thunder-daw/releases/tag/v0.2.0
 [v0.1.0]: https://github.com/canureal/thunder-daw/releases/tag/v0.1.0

@@ -1,10 +1,18 @@
 [package]
 name = "thunder-daw"
-version = "0.2.1"
+version = "0.2.2"
 edition = "2024"
 description = "A small FL Studio-style DAW in Rust"
+authors = ["thunder-daw contributors"]
 license = "MIT"
 repository = "https://github.com/canureal/thunder-daw"
+homepage = "https://canureal.github.io/thunder-daw/"
+
+[package.metadata.wix]
+upgrade-guid = "9B538FC9-5CB1-4E8A-84BD-695D60CEB5E7"
+path-guid = "42412B8A-3916-4C6A-ACB7-0F30D645728D"
+license = false
+eula = false
 
 [dependencies]
 cpal = "0.18"
@@ -30,7 +38,11 @@ targets = [
   "x86_64-apple-darwin",
   "aarch64-apple-darwin",
 ]
-installers = ["shell", "powershell"]
+installers = ["shell", "powershell", "msi", "homebrew"]
+install-success-msg = "thunder-daw is installed! Run it with: thunder-daw"
+tap = "canureal/homebrew-tap"
+include = ["assets/thunder-daw.desktop", "assets/icon.svg"]
+publish-jobs = ["homebrew"]
 
 [workspace.metadata.dist.dependencies.apt]
 libasound2-dev = "*"
