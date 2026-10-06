@@ -10,17 +10,10 @@ A small FL Studio-style DAW in Rust: step sequencer, piano roll, playlist, mixer
 
 Prebuilt binaries for Windows, macOS and Linux are attached to every
 [release](https://github.com/canureal/thunder-daw/releases).
-The quick way, Linux or macOS:
-
-```bash
-curl --proto '=https' --tlsv1.2 -LsSf https://github.com/canureal/thunder-daw/releases/latest/download/thunder-daw-installer.sh | sh
-```
-
-Windows, in PowerShell:
-
-```powershell
-irm https://github.com/canureal/thunder-daw/releases/latest/download/thunder-daw-installer.ps1 | iex
-```
+Pick the one for your system on the
+[download page](https://canureal.github.io/thunder-daw/releases.html):
+Windows gets an MSI wizard, Mac a drag-to-Applications disk image,
+Linux an AppImage. No terminal required.
 
 ## Features
 
