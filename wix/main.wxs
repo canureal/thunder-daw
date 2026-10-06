@@ -138,8 +138,7 @@
                                 Name='thunder-daw'
                                 Description='Small FL-style DAW'
                                 Target='[Bin]thunder-daw.exe'
-                                WorkingDirectory='APPLICATIONFOLDER'
-                                Icon='AppICO'/>
+                                WorkingDirectory='APPLICATIONFOLDER'/>
                             <RemoveFolder Id='ApplicationProgramsFolder' On='uninstall'/>
                             <RegistryValue
                                 Root='HKCU'
@@ -155,8 +154,7 @@
                                 Name='thunder-daw'
                                 Description='Small FL-style DAW'
                                 Target='[Bin]thunder-daw.exe'
-                                WorkingDirectory='APPLICATIONFOLDER'
-                                Icon='AppICO'/>
+                                WorkingDirectory='APPLICATIONFOLDER'/>
                             <RegistryValue
                                 Root='HKCU'
                                 Key='Software\thunder-daw'
@@ -225,8 +223,8 @@
           The product icon is the graphic that appears in the Add/Remove
           Programs control panel for the application.
         -->
-        <Icon Id='AppICO' SourceFile='..\assets\icon.ico'/>
-        <Property Id='ARPPRODUCTICON' Value='AppICO' />
+        <!--<Icon Id='ProductICO' SourceFile='wix\Product.ico'/>-->
+        <!--<Property Id='ARPPRODUCTICON' Value='ProductICO' />-->
 
         <Property Id='ARPHELPLINK' Value='https://canureal.github.io/thunder-daw/'/>
         
@@ -243,7 +241,8 @@
                    the path to a RTF file that will be used as the EULA and
                    displayed in the license agreement dialog.
             -->
-            <WixVariable Id='WixUILicenseRtf' Value='eula.rtf'/>
+            <Publish Dialog='WelcomeDlg' Control='Next' Event='NewDialog' Value='CustomizeDlg' Order='99'>1</Publish>
+            <Publish Dialog='CustomizeDlg' Control='Back' Event='NewDialog' Value='WelcomeDlg' Order='99'>1</Publish>
 
         </UI>
 
