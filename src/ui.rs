@@ -146,9 +146,9 @@ fn sample_files(dir: &str) -> Vec<String> {
 }
 
 fn home_music_dir() -> String {
-    std::env::var("HOME")
-        .map(|h| format!("{h}/Music/samples"))
-        .unwrap_or_else(|_| "samples".into())
+    dirs::audio_dir()
+        .map(|p| p.join("samples").to_string_lossy().into_owned())
+        .unwrap_or_else(|| "samples".into())
 }
 
 // ---------------------------------------------------------------------------
@@ -1136,7 +1136,10 @@ pub fn browser(ui: &mut AppUi, s: &mut AppState, u: &mut egui::Ui) {
     }
     for path in ui.browser_cache.clone() {
         u.horizontal(|u| {
-            let name = path.rsplit('/').next().unwrap_or(&path).to_owned();
+            let name = std::path::Path::new(&path)
+                .file_name()
+                .map(|x| x.to_string_lossy().into_owned())
+                .unwrap_or_else(|| path.clone());
             u.label(name);
             if u.button("▶").on_hover_text("Preview").clicked() {
                 match sample_into_song(s, &path) {

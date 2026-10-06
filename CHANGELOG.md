@@ -1,7 +1,20 @@
 # Changelog
 
-All notable changes to thunder-daw are documented here.
+Changes are listed per release, newest first.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+
+## [v0.2.1] - 2026-10-06
+
+### Added
+
+- Installers for all three desktop OSes: cargo-dist builds Linux, Windows
+  and macOS binaries on every tag, with shell and PowerShell install scripts
+- Sample browser opens the OS music folder on each platform
+
+### Fixed
+
+- File names now parse on Windows paths; music folder lookup no longer
+  assumes `$HOME` exists
 
 ## [v0.2.0] - 2026-10-05
 
@@ -48,5 +61,6 @@ Initial release.
 - Audio thread drops to silence on lock contention (`Mutex::try_lock`)
 - Linux build needs ALSA/X11/Wayland dev packages (see README)
 
+[v0.2.1]: https://github.com/canureal/thunder-daw/releases/tag/v0.2.1
 [v0.2.0]: https://github.com/canureal/thunder-daw/releases/tag/v0.2.0
 [v0.1.0]: https://github.com/canureal/thunder-daw/releases/tag/v0.1.0

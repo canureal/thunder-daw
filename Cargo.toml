@@ -1,7 +1,10 @@
 [package]
 name = "thunder-daw"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2024"
+description = "A small FL Studio-style DAW in Rust"
+license = "MIT"
+repository = "https://github.com/canureal/thunder-daw"
 
 [dependencies]
 cpal = "0.18"
@@ -11,3 +14,32 @@ fundsp = "0.23"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 hound = "3"
+dirs = "6"
+
+[workspace.metadata.dist]
+cargo-dist-version = "0.32.0"
+rust-version = "1.99.0"
+ci = ["github"]
+targets = [
+  "x86_64-unknown-linux-gnu",
+  "x86_64-pc-windows-msvc",
+  "x86_64-apple-darwin",
+  "aarch64-apple-darwin",
+]
+installers = ["shell", "powershell"]
+
+[workspace.metadata.dist.dependencies.apt]
+libasound2-dev = "*"
+libx11-dev = "*"
+libxcb1-dev = "*"
+libxext-dev = "*"
+libxrandr-dev = "*"
+libxi-dev = "*"
+libxcursor-dev = "*"
+libxinerama-dev = "*"
+libxkbcommon-dev = "*"
+libxkbcommon-x11-dev = "*"
+libwayland-dev = "*"
+libegl-dev = "*"
+libgl-dev = "*"
+libdbus-1-dev = "*"

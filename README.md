@@ -1,46 +1,72 @@
 # thunder-daw
 
-A tiny FL Studio-style step-sequencer DAW in Rust.
+A small FL Studio-style DAW in Rust: step sequencer, piano roll, playlist, mixer.
 
-- **Audio backend:** [`cpal`](https://crates.io/crates/cpal) — cross-platform audio I/O
-- **GUI:** [`egui`](https://crates.io/crates/egui) via [`eframe`](https://crates.io/crates/eframe) — immediate-mode UI, native + web
-- **DSP:** [`fundsp`](https://crates.io/crates/fundsp) — every voice is a live fundsp graph
-  (`var(pitch) >> osc >> lowpass_hz * (var(gate) >> adsr_live) >> pan`)
+- Audio through [cpal](https://crates.io/crates/cpal)
+- Interface with [egui](https://crates.io/crates/egui) via [eframe](https://crates.io/crates/eframe)
+- All sound from [fundsp](https://crates.io/crates/fundsp): each voice is a live DSP graph
+
+## Install
+
+Prebuilt binaries for Windows, macOS and Linux are attached to every
+[release](https://github.com/canureal/thunder-daw/releases).
+The quick way, Linux or macOS:
+
+```bash
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/canureal/thunder-daw/releases/latest/download/thunder-daw-installer.sh | sh
+```
+
+Windows, in PowerShell:
+
+```powershell
+irm https://github.com/canureal/thunder-daw/releases/latest/download/thunder-daw-installer.ps1 | iex
+```
 
 ## Features
 
-- 6-channel step sequencer (Kick / Snare / Hat / Bass / Lead / Pad), 16 steps each
-- Per-channel editor: waveform, base note, filter cutoff + Q, ADSR
-- Mixer with per-track volume + equal-power pan, master volume, peak meter
-- Live piano (2 octaves) driving a dedicated fundsp saw voice
-- Master scope rendering the real cpal output buffer
-- Headless self-test: `cargo run -- --offline-test`
+- Piano roll: add, drag and resize notes, velocity lane, ghost notes, scales,
+  chord stamps, quantize, humanize, strum, arpeggiate
+- Playlist: 8 patterns as one-bar clips, song or pattern mode
+- Instruments: polyphonic synths (8 voices each), synthesized drum kit,
+  sampler with WAV/MP3/OGG loading and a file browser
+- Mixer: per-channel delay and reverb sends, soft-clipped master, scope, peak meter
+- Automation lanes for volume and filter cutoff
+- Save/load projects as JSON, export WAV mixdown or MIDI file
+- Metronome, swing, tap tempo, song loop
 
-## Requirements (Linux)
+## Build from source
+
+You need a Rust toolchain (1.88 or newer):
+
+```bash
+git clone https://github.com/canureal/thunder-daw.git
+cd thunder-daw
+cargo run --release
+```
+
+Linux also needs the audio and windowing headers:
 
 ```bash
 sudo apt install libasound2-dev libx11-dev libxkbcommon-dev libwayland-dev libegl-dev libgl-dev
 ```
 
-## Run
+Windows and macOS need nothing extra.
+
+## Tests
+
+Unit tests plus a headless audio render that fails on silence or NaN:
 
 ```bash
-cargo run --release
-```
-
-## Self-test (no audio hardware / display needed)
-
-```bash
+cargo test
 cargo run -- --offline-test
 ```
 
-## Website & docs
+## Website and docs
 
-- Landing page + docs: [`website/`](website/) — deployed to GitHub Pages on every push to `main`
-- Docs: open the deployed site and go to **Docs**
-- Releases: [changelog](CHANGELOG.md) + [GitHub Releases](https://github.com/canureal/thunder-daw/releases)
+The site in [`website/`](website/) deploys to GitHub Pages on every push to `main`.
+Releases live under [GitHub Releases](https://github.com/canureal/thunder-daw/releases)
+with the [changelog](CHANGELOG.md) in the repo.
 
-## Project status
+## Status
 
-See [PROD-READINESS](docs/PROD-READINESS.md) for the honest audit:
-CI, Dependabot, Pages, and what's still missing.
+See [PROD-READINESS](docs/PROD-READINESS.md) for what is done and what is missing.

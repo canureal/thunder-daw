@@ -3,13 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>thunder-daw — tiny FL-style DAW in Rust</title>
+<title>thunder-daw: a small FL-style DAW in Rust</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <header>
-  <h1>⚡ thunder-daw</h1>
-  <p>A tiny FL Studio-style step-sequencer DAW in Rust.</p>
+  <h1>thunder-daw</h1>
+  <p>A small FL Studio-style DAW written in Rust. Step sequencer, piano roll,
+  playlist, mixer. Nothing hosted, no account, files stay on your disk.</p>
   <nav>
     <a href="index.html" aria-current="page">Home</a> ·
     <a href="docs.html">Docs</a> ·
@@ -18,36 +19,42 @@
 </header>
 <main>
   <section class="grid">
-    <div class="card"><strong>cpal 0.18</strong><span>cross-platform audio backend</span></div>
-    <div class="card"><strong>egui 0.36</strong><span>immediate-mode GUI</span></div>
-    <div class="card"><strong>fundsp 0.23</strong><span>every voice is a live DSP graph</span></div>
+    <div class="card"><strong>cpal 0.18</strong><span>audio in and out, all three desktop OSes</span></div>
+    <div class="card"><strong>egui 0.36</strong><span>interface drawn each frame, no retained widgets</span></div>
+    <div class="card"><strong>fundsp 0.23</strong><span>each voice is a live DSP graph</span></div>
   </section>
 
   <section>
-    <h2>Make music</h2>
+    <h2>What it does</h2>
     <div class="grid">
-      <div class="card"><strong>Piano roll</strong><span>notes, velocity, ghost notes, scales, chord stamps, quantize / humanize / strum / arp</span></div>
-      <div class="card"><strong>Playlist</strong><span>8 patterns as per-bar clips, Song / Pattern modes</span></div>
-      <div class="card"><strong>Instruments</strong><span>8-voice poly synths, synthesized drum kit, WAV/MP3 sampler + browser</span></div>
-      <div class="card"><strong>Mixer &amp; FX</strong><span>delay + reverb sends, soft-clipped master, scope, peak meter</span></div>
-      <div class="card"><strong>Automation</strong><span>volume + filter-cutoff lanes, no-dropout live control</span></div>
-      <div class="card"><strong>Song tools</strong><span>JSON save/load, WAV mixdown, MIDI export, metronome, swing, tap tempo</span></div>
+      <div class="card"><strong>Piano roll</strong><span>add, drag and resize notes. Velocity lane, ghost notes, scales, chord stamps. Quantize, humanize, strum, arpeggiate.</span></div>
+      <div class="card"><strong>Playlist</strong><span>eight patterns placed as one-bar clips. Play the arrangement or loop a single pattern.</span></div>
+      <div class="card"><strong>Instruments</strong><span>polyphonic synths with eight voices each, a synthesized drum kit, and a sampler that loads WAV, MP3 and OGG files.</span></div>
+      <div class="card"><strong>Mixer and FX</strong><span>per-channel delay and reverb sends, soft-clipped master bus, scope and peak meter.</span></div>
+      <div class="card"><strong>Automation</strong><span>volume and filter-cutoff lanes. The cutoff moves live with no audio dropouts.</span></div>
+      <div class="card"><strong>Song tools</strong><span>save and load projects as JSON, export a WAV mixdown or a MIDI file. Metronome, swing, tap tempo.</span></div>
     </div>
   </section>
 
   <section>
-    <h2>Run it</h2>
-    <pre><code>sudo apt install libasound2-dev libx11-dev libxkbcommon-dev libwayland-dev libegl-dev libgl-dev
+    <h2>Install</h2>
+    <p>Linux or macOS, paste this in a terminal:</p>
+    <pre><code>curl --proto '=https' --tlsv1.2 -LsSf https://github.com/canureal/thunder-daw/releases/latest/download/thunder-daw-installer.sh | sh</code></pre>
+    <p>Windows, in PowerShell:</p>
+    <pre><code>irm https://github.com/canureal/thunder-daw/releases/latest/download/thunder-daw-installer.ps1 | iex</code></pre>
+    <p>Or build from source. Linux needs the audio and windowing headers first:</p>
+    <pre><code>git clone https://github.com/canureal/thunder-daw.git
+cd thunder-daw
+sudo apt install libasound2-dev libx11-dev libxkbcommon-dev libwayland-dev libegl-dev libgl-dev
 cargo run --release</code></pre>
-    <p>…or grab the Linux binary from
-    <a href="releases.html">Releases</a>.</p>
   </section>
 
   <section>
-    <h2>Status</h2>
-    <p>Actively developed toy with honest engineering: CI, Dependabot,
-    7 unit tests, and a headless audio self-test on every push.
-    Full audit on the <a href="docs.html">Docs</a> page.</p>
+    <h2>Status and limits</h2>
+    <p>CI runs fmt, clippy, unit tests and a headless audio self-test on every
+    push. Dependabot keeps dependencies current. Known limits: eight fixed
+    channels, no plugin hosting, no audio recording. The
+    <a href="docs.html">docs page</a> lists all of it.</p>
   </section>
 </main>
 <footer>MIT · thunder-daw contributors · <a href="https://github.com/canureal/thunder-daw">GitHub</a></footer>

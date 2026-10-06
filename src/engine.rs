@@ -815,7 +815,10 @@ pub fn sample_into_song(s: &mut AppState, path: &str) -> Result<usize, String> {
         return Ok(idx);
     }
     let (data, sr) = load_sample_file(path)?;
-    let name = path.rsplit('/').next().unwrap_or(path).to_string();
+    let name = std::path::Path::new(path)
+        .file_name()
+        .map(|x| x.to_string_lossy().into_owned())
+        .unwrap_or_else(|| path.to_string());
     s.song.samples.push(crate::song::SampleRef {
         name,
         path: path.into(),
