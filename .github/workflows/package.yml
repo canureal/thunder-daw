@@ -39,8 +39,8 @@ jobs:
       - name: Assemble universal .app
         run: |
           mkdir -p x64 arm
-          tar -xf pkgs/thunder-daw-x86_64-apple-darwin.tar.xz -C x64
-          tar -xf pkgs/thunder-daw-aarch64-apple-darwin.tar.xz -C arm
+          tar -xf pkgs/thunder-daw-x86_64-apple-darwin.tar.xz -C x64 --strip-components=1
+          tar -xf pkgs/thunder-daw-aarch64-apple-darwin.tar.xz -C arm --strip-components=1
           lipo -create x64/thunder-daw arm/thunder-daw \
             -output app/ThunderDAW.app/Contents/MacOS/thunder-daw
           chmod +x app/ThunderDAW.app/Contents/MacOS/thunder-daw
@@ -86,7 +86,7 @@ jobs:
           mkdir -p pkg AppDir/usr/bin
           gh release download "$TAG" --repo canureal/thunder-daw \
             --pattern 'thunder-daw-x86_64-unknown-linux-gnu.tar.xz' --dir pkg
-          tar -xf pkg/thunder-daw-x86_64-unknown-linux-gnu.tar.xz -C pkg
+          tar -xf pkg/thunder-daw-x86_64-unknown-linux-gnu.tar.xz -C pkg --strip-components=1
       - uses: actions/checkout@v5
         with:
           ref: ${{ env.TAG }}
