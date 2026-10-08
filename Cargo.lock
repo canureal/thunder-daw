@@ -3635,7 +3635,7 @@ dependencies = [
 
 [[package]]
 name = "thunder-daw"
-version = "0.2.3"
+version = "0.2.5"
 dependencies = [
  "cpal",
  "dirs",
