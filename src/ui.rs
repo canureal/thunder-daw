@@ -119,6 +119,7 @@ pub struct AppUi {
     pending_add: Option<(u32, u8)>,
     auto_sel: AutoSel,
     auto_drag: Option<usize>,
+    auto_pressed: bool,
     save_path: String,
     wav_path: String,
     mid_path: String,
@@ -127,6 +128,29 @@ pub struct AppUi {
     browser_cache: Vec<String>,
     pub status: String,
     taps: Vec<Instant>,
+    show_tutorial: bool,
+}
+
+/// Marker file: first run shows the tutorial, afterwards it stays hidden.
+fn tutorial_marker() -> Option<std::path::PathBuf> {
+    dirs::config_dir().map(|p| p.join("thunder-daw").join("tutorial_seen"))
+}
+
+fn tutorial_seen() -> bool {
+    tutorial_marker().map(|p| p.exists()).unwrap_or(true)
+}
+
+fn set_tutorial_seen(seen: bool) {
+    if let Some(p) = tutorial_marker() {
+        if seen {
+            if let Some(dir) = p.parent() {
+                std::fs::create_dir_all(dir).ok();
+            }
+            std::fs::write(p, "1").ok();
+        } else {
+            std::fs::remove_file(p).ok();
+        }
+    }
 }
 
 impl Default for AppUi {
@@ -152,14 +176,16 @@ impl Default for AppUi {
             pending_add: None,
             auto_sel: AutoSel::Vol,
             auto_drag: None,
+            auto_pressed: false,
             save_path: "thunder-daw.json".into(),
             wav_path: "mixdown.wav".into(),
             mid_path: "song.mid".into(),
             sample_path: String::new(),
             browser_dir: "samples".into(),
             browser_cache: Vec::new(),
-            status: "ready".into(),
+            status: "press Play or open the Tutorial".into(),
             taps: Vec::new(),
+            show_tutorial: !tutorial_seen(),
         }
     }
 }
@@ -250,10 +276,17 @@ pub fn transport(ui: &mut AppUi, s: &mut AppState, u: &mut egui::Ui) {
         u.separator();
         let mut playing = s.rt.playing;
         if u.button(if playing { "⏹ Stop" } else { "▶ Play" })
+            .on_hover_text("Spacebar works too")
             .clicked()
         {
             playing = !playing;
             s.rt.playing = playing;
+        }
+        if u.button("Tutorial")
+            .on_hover_text("First-time walkthrough")
+            .clicked()
+        {
+            ui.show_tutorial = !ui.show_tutorial;
         }
         if u.button("⏮ Reset").clicked() {
             s.rt.reset_transport();
@@ -518,6 +551,40 @@ const KEY_W: f32 = 52.0;
 fn piano_midi_range(bot: u8) -> (u8, u8) {
     let top = (bot + PIANO_ROWS - 1).min(108);
     (bot.max(21), top)
+}
+
+/// Snap a pitch into the scale when snap-to-scale is on, else pass through.
+fn scale_checked(ui: &AppUi, midi: u8) -> u8 {
+    if ui.snap_scale {
+        ui.scale.snap_midi(midi, ui.root)
+    } else {
+        midi
+    }
+}
+
+/// Add a single note or a chord stamp, then report it in the status line.
+fn place_note(ui: &mut AppUi, s: &mut AppState, ch: usize, pat: usize, tick: u32, midi: u8) {
+    match ui.chord {
+        ChordMode::Off => {
+            if let Some(notes) = s.song.patterns[pat].notes.get_mut(ch) {
+                notes.push(Note::new(tick, ui.snap.max(1), midi, 0.85));
+                notes.sort_by_key(|n| n.tick);
+                ui.sel_note = notes.iter().rposition(|n| n.tick == tick && n.midi == midi);
+                ui.status = format!("note {} at tick {tick}", note_label(midi));
+            }
+        }
+        ChordMode::Maj | ChordMode::Min => {
+            let minor = ui.chord == ChordMode::Min;
+            if let Some(notes) = s.song.patterns[pat].notes.get_mut(ch) {
+                notes.extend(tool_chord(tick, midi, minor));
+                notes.sort_by_key(|n| n.tick);
+                ui.status = format!(
+                    "{} chord at tick {tick}",
+                    if minor { "minor" } else { "major" }
+                );
+            }
+        }
+    }
 }
 
 #[allow(clippy::too_many_lines)]
@@ -859,13 +926,7 @@ pub fn piano_roll(ui: &mut AppUi, s: &mut AppState, u: &mut egui::Ui) {
                 } else if ui.tool == PianoTool::Draw {
                     let snap_t =
                         ((t / ui.snap.max(1) as i32) * ui.snap.max(1) as i32).clamp(0, 63) as u32;
-                    let mp = m as u8;
-                    let mp = if ui.snap_scale {
-                        ui.scale.snap_midi(mp, ui.root)
-                    } else {
-                        mp
-                    };
-                    ui.pending_add = Some((snap_t, mp));
+                    ui.pending_add = Some((snap_t, scale_checked(ui, m as u8)));
                 } else if ui.tool == PianoTool::Hear {
                     s.rt.live_note(m as u8);
                 }
@@ -899,22 +960,42 @@ pub fn piano_roll(ui: &mut AppUi, s: &mut AppState, u: &mut egui::Ui) {
     } else {
         ui.drag = None;
     }
-    if resp.clicked()
-        && let Some((t, m)) = ui.pending_add.take()
-    {
-        match ui.chord {
-            ChordMode::Off => {
-                if let Some(notes) = s.song.patterns[pat].notes.get_mut(ch) {
-                    notes.push(Note::new(t, ui.snap.max(1), m, 0.85));
-                    notes.sort_by_key(|n| n.tick);
-                    ui.sel_note = notes.iter().rposition(|n| n.tick == t && n.midi == m);
+    if resp.clicked() {
+        if let Some((t, m)) = ui.pending_add.take() {
+            // Press-drag-release path: press already chose the cell.
+            place_note(ui, s, ch, pat, t, m);
+        } else if let Some(pos) = resp.hover_pos() {
+            // Pure click path: no press event fired, hit-test here instead.
+            let t = tick_at(pos.x);
+            let m = midi_at(pos.y);
+            if pos.x < rect.min.x + KEY_W {
+                if m >= midi_lo as i32 && m <= midi_hi as i32 {
+                    s.rt.live_note(m as u8);
                 }
-            }
-            ChordMode::Maj | ChordMode::Min => {
-                let minor = ui.chord == ChordMode::Min;
-                if let Some(notes) = s.song.patterns[pat].notes.get_mut(ch) {
-                    notes.extend(tool_chord(t, m, minor));
-                    notes.sort_by_key(|n| n.tick);
+            } else if (0..64).contains(&t) && m >= midi_lo as i32 && m <= midi_hi as i32 {
+                match ui.tool {
+                    PianoTool::Draw => {
+                        if let Some(idx) = hit_note(t, m) {
+                            ui.sel_note = Some(idx);
+                        } else {
+                            let snap_t = ((t / ui.snap.max(1) as i32) * ui.snap.max(1) as i32)
+                                .clamp(0, 63) as u32;
+                            let mp = scale_checked(ui, m as u8);
+                            place_note(ui, s, ch, pat, snap_t, mp);
+                        }
+                    }
+                    PianoTool::Erase => {
+                        if let Some(idx) = hit_note(t, m)
+                            && let Some(notes) = s.song.patterns[pat].notes.get_mut(ch)
+                            && idx < notes.len()
+                        {
+                            notes.remove(idx);
+                            ui.sel_note = None;
+                        }
+                    }
+                    PianoTool::Hear => {
+                        s.rt.live_note(m as u8);
+                    }
                 }
             }
         }
@@ -1138,6 +1219,7 @@ fn automation_lane(ui: &mut AppUi, s: &mut AppState, ch: usize, pat: usize, u: &
     };
     if resp.drag_started() {
         ui.auto_drag = None;
+        ui.auto_pressed = true;
         if let Some(pos) = resp.hover_pos() {
             let t = tick_at(pos.x);
             if near_idx(&points, pos).is_none() {
@@ -1177,6 +1259,29 @@ fn automation_lane(ui: &mut AppUi, s: &mut AppState, ch: usize, pat: usize, u: &
     } else {
         ui.auto_drag = None;
     }
+    // Pure clicks never start a drag, so add the point here instead.
+    // A press that already added one sets auto_pressed: don't double up.
+    if resp.clicked() {
+        if ui.auto_pressed {
+            ui.auto_pressed = false;
+        } else if ui.auto_drag.is_none()
+            && let Some(pos) = resp.hover_pos()
+        {
+            let t = tick_at(pos.x);
+            let pts = if is_vol {
+                &mut s.song.patterns[pat].auto_vol
+            } else {
+                &mut s.song.patterns[pat].auto_cut
+            };
+            if let Some(list) = pts.get_mut(ch) {
+                list.push(AutoPoint {
+                    tick: t,
+                    value: val_at(pos.y),
+                });
+                ui.status = "automation point added".into();
+            }
+        }
+    }
     if resp.clicked_by(egui::PointerButton::Secondary)
         && let Some(pos) = resp.hover_pos()
         && let Some(idx) = near_idx(&points, pos)
@@ -1191,6 +1296,53 @@ fn automation_lane(ui: &mut AppUi, s: &mut AppState, ch: usize, pat: usize, u: &
         {
             list.remove(idx);
         }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Tutorial
+// ---------------------------------------------------------------------------
+
+/// First-run walkthrough. Opens on the very first launch, then stays hidden
+/// unless reopened from the toolbar. "Load demo" fills the blank project
+/// with the example groove so new users hear something immediately.
+pub fn tutorial(ui: &mut AppUi, s: &mut AppState, u: &mut egui::Ui) {
+    if !ui.show_tutorial {
+        return;
+    }
+    let mut close = false;
+    egui::Window::new("Welcome to thunder-daw")
+        .collapsible(false)
+        .show(u.ctx(), |w| {
+            w.label("Make your first beat in two minutes:");
+            w.label("1. Channel rack: click the numbered boxes to place kick, snare, hat hits.");
+            w.label("2. Press Play (or Spacebar) to hear your pattern loop.");
+            w.label("3. Click Bass or Lead, then click in the piano roll to draw notes.");
+            w.label("4. Playlist: add bars and pick a pattern per bar to build a song.");
+            w.label("5. Mixer: set levels, pan, echo and reverb sends.");
+            w.label("6. Transport: save the project, export a WAV mixdown or MIDI file.");
+            w.horizontal(|w| {
+                if w.button("Load demo song").clicked() {
+                    s.song = crate::song::demo_song();
+                    let sr = s.rt.sr;
+                    s.rt.set_sample_rate(sr, &s.song);
+                    ui.sel_ch = 4;
+                    ui.sel_pat = 0;
+                    s.rt.pattern = 0;
+                    ui.status = "demo loaded: press Play".into();
+                    close = true;
+                }
+                if w.button("Start blank").clicked() {
+                    close = true;
+                }
+            });
+            let mut show_on_start = !tutorial_seen();
+            if w.checkbox(&mut show_on_start, "Show on startup").changed() {
+                set_tutorial_seen(!show_on_start);
+            }
+        });
+    if close {
+        ui.show_tutorial = false;
     }
 }
 

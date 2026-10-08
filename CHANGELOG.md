@@ -3,6 +3,20 @@
 Changes are listed per release, newest first.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v0.2.4] - 2026-10-08
+
+### Fixed
+
+- Clicking the piano roll, velocity lane and automation lane did nothing.
+  Pressing the mouse never started a drag, so no edit was ever recorded.
+  Plain clicks now place notes, set velocity and add automation points,
+  with a status-line message confirming each edit.
+
+### Added
+
+- In-app tutorial window on first launch, with a demo song loader
+- New projects start blank (untitled, no notes) instead of the demo groove
+
 ## [v0.2.3] - 2026-10-06
 
 ### Added
@@ -80,6 +94,7 @@ Initial release.
 - Audio thread drops to silence on lock contention (`Mutex::try_lock`)
 - Linux build needs ALSA/X11/Wayland dev packages (see README)
 
+[v0.2.4]: https://github.com/canureal/thunder-daw/releases/tag/v0.2.4
 [v0.2.3]: https://github.com/canureal/thunder-daw/releases/tag/v0.2.3
 [v0.2.2]: https://github.com/canureal/thunder-daw/releases/tag/v0.2.2
 [v0.2.1]: https://github.com/canureal/thunder-daw/releases/tag/v0.2.1

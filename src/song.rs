@@ -421,7 +421,7 @@ fn steps(pat: &mut Pattern, ch: usize, on: &[usize], midi: u8) {
     }
 }
 
-pub fn demo_song() -> Song {
+fn default_channels() -> (Vec<Channel>, Vec<Pattern>) {
     let channels = vec![
         kit_ch("Kick", KitPiece::Kick, 1.0, 0.0),
         kit_ch("Snare", KitPiece::Snare, 0.8, 0.0),
@@ -464,13 +464,40 @@ pub fn demo_song() -> Song {
         },
     ];
     let nch = channels.len();
-    let mut patterns: Vec<Pattern> = (0..N_PATTERNS)
+    let patterns: Vec<Pattern> = (0..N_PATTERNS)
         .map(|_| Pattern {
             notes: vec![Vec::new(); nch],
             auto_vol: vec![Vec::new(); nch],
             auto_cut: vec![Vec::new(); nch],
         })
         .collect();
+    (channels, patterns)
+}
+
+/// A brand-new project: named instruments, no notes, no arrangement.
+/// This is what first-time users get instead of the demo groove.
+pub fn new_empty() -> Song {
+    let (channels, patterns) = default_channels();
+    Song {
+        save_version: SAVE_VERSION,
+        title: "untitled".into(),
+        bpm: 128.0,
+        swing: 0.0,
+        master_vol: 0.9,
+        metronome: false,
+        loop_song: true,
+        delay_time: 0.32,
+        delay_mix: 0.18,
+        reverb_mix: 0.22,
+        channels,
+        patterns,
+        arrangement: Vec::new(),
+        samples: Vec::new(),
+    }
+}
+
+pub fn demo_song() -> Song {
+    let (channels, mut patterns) = default_channels();
 
     // Pattern 0: full groove.
     steps(&mut patterns[0], 0, &[0, 4, 8, 12], 36);
@@ -578,6 +605,19 @@ mod tests {
         tool_quantize(&mut notes, 4);
         assert_eq!(notes[0].tick, 4);
         assert_eq!(notes[1].tick, 12);
+    }
+
+    #[test]
+    fn empty_project_has_no_notes() {
+        let song = new_empty();
+        assert_eq!(song.title, "untitled");
+        assert!(song.arrangement.is_empty());
+        assert!(
+            song.patterns
+                .iter()
+                .all(|p| p.notes.iter().all(|ns| ns.is_empty()))
+        );
+        assert_eq!(song.channels.len(), 8);
     }
 
     #[test]

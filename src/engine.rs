@@ -337,7 +337,7 @@ impl EngineRt {
             cur_pat: 0,
             cur_tick: 0,
             playing: false,
-            song_mode: true,
+            song_mode: false,
             pattern: 0,
             ignore_loop: false,
             peak: 0.0,
@@ -813,7 +813,7 @@ pub struct AppState {
 
 impl AppState {
     pub fn new() -> Self {
-        let song = crate::song::demo_song();
+        let song = crate::song::new_empty();
         let mut rt = EngineRt::new(44100.0);
         rt.ensure_channels(&song);
         Self { song, rt }

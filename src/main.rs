@@ -70,6 +70,7 @@ impl eframe::App for DawApp {
         eframe::egui::CentralPanel::default().show(ui, |u| {
             eframe::egui::ScrollArea::vertical().show(u, |u| {
                 if let Ok(mut s) = self.state.lock() {
+                    ui::tutorial(&mut self.ui, &mut s, u);
                     if self.ui.show_rack {
                         ui::channel_rack(&mut self.ui, &mut s, u);
                         u.separator();
@@ -105,6 +106,10 @@ impl eframe::App for DawApp {
 fn main() {
     if std::env::args().any(|a| a == "--offline-test") {
         let mut st = AppState::new();
+        // The default project is blank; the self-test needs sound to find.
+        st.song = song::demo_song();
+        let sr = st.rt.sr;
+        st.rt.set_sample_rate(sr, &st.song);
         st.rt.song_mode = true;
         st.rt.playing = true;
         let n = 44100 * 4;
