@@ -28,9 +28,6 @@ jobs:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       TAG: ${{ github.event.inputs.tag || github.event.workflow_run.head_branch }}
       DEBIAN_FRONTEND: noninteractive
-    defaults:
-      run:
-        working-directory: src
     steps:
       - name: Check the release exists
         run: gh release view "$TAG" --repo canureal/thunder-daw --json tagName
@@ -54,13 +51,16 @@ jobs:
           git clone --depth 1 --branch "$TAG" https://github.com/canureal/thunder-daw.git src
           cd src && git rev-parse HEAD
       - name: Build against old glibc
+        working-directory: src
         run: |
           cargo build --profile dist --locked
           objdump -T target/dist/thunder-daw \
             | grep -oE 'GLIBC_[0-9.]+' | sort -Vu | tail -2
       - name: Smoke-test the old-glibc binary
+        working-directory: src
         run: ./target/dist/thunder-daw --offline-test
       - name: Pack compat tarball and AppImage
+        working-directory: src
         run: |
           VERSION="${TAG#v}"
           mkdir -p dist-out/AppDir/usr/bin
@@ -79,6 +79,6 @@ jobs:
       - name: Upload compat artifacts
         run: |
           VERSION="${TAG#v}"
-          gh release upload "$TAG" dist-out/thunder-daw-x86_64-oldlinux.tar.xz \
-            "dist-out/thunder-daw-$VERSION-x86_64-oldlinux.AppImage" \
+          gh release upload "$TAG" src/dist-out/thunder-daw-x86_64-oldlinux.tar.xz \
+            "src/dist-out/thunder-daw-$VERSION-x86_64-oldlinux.AppImage" \
             --repo canureal/thunder-daw --clobber
