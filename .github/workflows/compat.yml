@@ -29,8 +29,6 @@ jobs:
       TAG: ${{ github.event.inputs.tag || github.event.workflow_run.head_branch }}
       DEBIAN_FRONTEND: noninteractive
     steps:
-      - name: Check the release exists
-        run: gh release view "$TAG" --repo canureal/thunder-daw --json tagName
       - name: Install build tools
         run: |
           apt-get update -qq
