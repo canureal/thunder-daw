@@ -1,0 +1,84 @@
+name: compat
+
+# Old-distro Linux builds. The normal release binary links against the
+# runner's new glibc and refuses to start on older systems, so this job
+# rebuilds inside Ubuntu 20.04 (glibc 2.31) and uploads a compat tarball
+# plus a compat AppImage to the same release.
+# Trigger notes: releases made with GITHUB_TOKEN emit no `release`
+# event, so this runs when the Release workflow finishes (or manually).
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to extend (e.g. v0.2.5)"
+        required: true
+  workflow_run:
+    workflows: ["Release"]
+    types: [completed]
+
+permissions:
+  contents: write
+
+jobs:
+  oldlinux:
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && startsWith(github.event.workflow_run.head_branch, 'v')) }}
+    runs-on: ubuntu-22.04
+    container: ubuntu:20.04
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      TAG: ${{ github.event.inputs.tag || github.event.workflow_run.head_branch }}
+      DEBIAN_FRONTEND: noninteractive
+    defaults:
+      run:
+        working-directory: src
+    steps:
+      - name: Check the release exists
+        run: gh release view "$TAG" --repo canureal/thunder-daw --json tagName
+      - name: Install build tools
+        run: |
+          apt-get update -qq
+          apt-get install -y -qq curl git build-essential pkg-config ca-certificates \
+            libasound2-dev libx11-dev libxcb1-dev libxext-dev libxrandr-dev \
+            libxi-dev libxcursor-dev libxinerama-dev libxkbcommon-dev \
+            libxkbcommon-x11-dev libwayland-dev libegl-dev libgl-dev libdbus-1-dev
+          curl -LsSf -o /tmp/gh.deb \
+            https://github.com/cli/cli/releases/download/v2.78.0/gh_2.78.0_linux_amd64.deb
+          dpkg -i /tmp/gh.deb
+      - name: Install Rust
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
+            | sh -s -- -y --profile minimal --default-toolchain 1.99.0
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+      - name: Check out the tag
+        run: |
+          git clone --depth 1 --branch "$TAG" https://github.com/canureal/thunder-daw.git src
+          cd src && git rev-parse HEAD
+      - name: Build against old glibc
+        run: |
+          cargo build --profile dist --locked
+          objdump -T target/dist/thunder-daw \
+            | grep -oE 'GLIBC_[0-9.]+' | sort -Vu | tail -2
+      - name: Smoke-test the old-glibc binary
+        run: ./target/dist/thunder-daw --offline-test
+      - name: Pack compat tarball and AppImage
+        run: |
+          VERSION="${TAG#v}"
+          mkdir -p dist-out/AppDir/usr/bin
+          cp target/dist/thunder-daw dist-out/AppDir/usr/bin/
+          cp assets/thunder-daw.desktop dist-out/AppDir/
+          cp assets/icon-256.png dist-out/AppDir/thunder-daw.png
+          printf '#!/bin/sh\nexec "$APPDIR/usr/bin/thunder-daw" "$@"\n' > dist-out/AppDir/AppRun
+          chmod +x dist-out/AppDir/AppRun dist-out/AppDir/usr/bin/thunder-daw
+          tar -C dist-out/AppDir -cJf "dist-out/thunder-daw-x86_64-oldlinux.tar.xz" \
+            --transform 's,^,thunder-daw-x86_64-oldlinux/,' usr thunder-daw.desktop thunder-daw.png
+          curl -LsSf -o appimagetool \
+            https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
+          chmod +x appimagetool
+          ./appimagetool --appimage-extract-and-run dist-out/AppDir \
+            "dist-out/thunder-daw-$VERSION-x86_64-oldlinux.AppImage"
+      - name: Upload compat artifacts
+        run: |
+          VERSION="${TAG#v}"
+          gh release upload "$TAG" dist-out/thunder-daw-x86_64-oldlinux.tar.xz \
+            "dist-out/thunder-daw-$VERSION-x86_64-oldlinux.AppImage" \
+            --repo canureal/thunder-daw --clobber

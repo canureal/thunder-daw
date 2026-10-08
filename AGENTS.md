@@ -81,6 +81,8 @@ talk, no module lists on the website. Repo docs can carry the technical detail.
   tag `vX.Y.Z`, push tag, watch the Release run, then the package run.
 - Retagging a failed release is allowed only when nothing was published.
   Delete the remote tag first, then recreate it.
+- Old-glibc Linux builds ship via `compat.yml` (Ubuntu 20.04 container).
+  Fully static musl builds do not work for GUI audio apps, build old instead.
 - `dist generate` output (`release.yml`, `wix/main.wxs`) is committed.
   Hand edits to `main.wxs` are protected by `allow-dirty = ["msi"]`.
 - After release: confirm artifacts exist, test what can be tested here

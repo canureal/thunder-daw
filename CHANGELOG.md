@@ -3,6 +3,14 @@
 Changes are listed per release, newest first.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [v0.2.5] - 2026-10-08
+
+### Added
+
+- Old-Linux builds: every release now also ships a binary built against
+  glibc 2.31 (Ubuntu 20.04 era), as a tarball and an AppImage, for systems
+  the normal build refuses to start on
+
 ## [v0.2.4] - 2026-10-08
 
 ### Fixed
@@ -94,6 +102,7 @@ Initial release.
 - Audio thread drops to silence on lock contention (`Mutex::try_lock`)
 - Linux build needs ALSA/X11/Wayland dev packages (see README)
 
+[v0.2.5]: https://github.com/canureal/thunder-daw/releases/tag/v0.2.5
 [v0.2.4]: https://github.com/canureal/thunder-daw/releases/tag/v0.2.4
 [v0.2.3]: https://github.com/canureal/thunder-daw/releases/tag/v0.2.3
 [v0.2.2]: https://github.com/canureal/thunder-daw/releases/tag/v0.2.2
